@@ -19,14 +19,22 @@ The Justfaring contracts project uses the [Truffle Suite](https://trufflesuite.c
 
 With `node`, you can proceed with installing the project-specific dependencies:
 
-```bash
+``` shell
 npm install
 ```
 
 For static analysis, [Slither](https://github.com/crytic/slither) is used as a tools for performing automated security analysis on the smart contracts.
 
-```
+``` shell
 pip3 install slither-analyzer
+```
+
+`solc-select` is being used for managing the solidity version in use.
+
+``` shell
+pip3 install solc-select
+solc-select install 0.8.20
+solc-select use 0.8.20
 ```
 
 ## Developing
@@ -56,7 +64,7 @@ npm run fmt
 
 To run the tests:
 
-```bash
+``` shell
 npm run test
 ```
 
@@ -64,7 +72,7 @@ npm run test
 
 To run the analyzer:
 
-```bash
+``` shell
 npm run analyze
 ```
 
@@ -72,7 +80,7 @@ npm run analyze
 
 To migrate the contracts to a network:
 
-```bash
+``` shell
 npx truffle migrate --network <network-name>
 ```
 
