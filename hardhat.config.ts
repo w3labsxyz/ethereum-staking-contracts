@@ -78,7 +78,7 @@ task("update-rpc-port", "Prints and persists the enclave RPC port").setAction(as
 });
 
 const config: HardhatUserConfig = {
-  solidity: "0.8.18",
+  solidity: "0.8.21",
   networks: {
     localhost: {
       url: "http://127.0.0.1:8545",

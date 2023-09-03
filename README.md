@@ -1,17 +1,17 @@
 # Justfarming Contracts
 
 This repository contains the smart contract code for the Justfarming platform.
-Each contract has its own directory under [`contracts`](/contracts).
+Contracts are organized in the [`contracts`](/contracts) directory. [`interfaces`](/contracts/interfaces) implement external interfaces we depend on, [`lib`](/contracts/lib) contains our actual contracts and [`test`](/contracts/test) the mocked contracts for testing.
 
 ## Contracts
 
-### Split Rewards
+### StakingRewards
 
-The contracts in the `split-rewards` directory handle the allocation of staking rewards between a staking customer and the platform. The primary contract `SplitRewards.sol` implements a pull-based approach for withdrawing validator rewards. For more information, see `contracts/split-rewards/README.md`.
+The Justfarming StakingRewards contract manages the allocation of staking rewards between a staking customer and the platform. The primary contract `StakingRewards.sol` implements a pull-based approach for withdrawing validator rewards and fees respectively. For more information, see `contracts/lib/StakingRewards.sol`.
 
-### Batch Deposit
+### BatchDeposit
 
-The contracts in the `batch-deposit` directory enable the customer to deploy more than one Ethereum validator at once. `BatchDeposit.sol` contract interacts with the Ethereum staking deposit contract, allowing multiple calls in a loop. For more information, see `contracts/batch-deposit/README.md`.
+The Justfarming BatchDeposit contract enables deployment of multiple Ethereum validators at once. The `BatchDeposit.sol` contract interacts with the Ethereum staking deposit contract. For more information, see `contracts/lib/BatchDeposit.sol`.
 
 Credits also go to [stakefish](https://www.stake.fish) and [abyss](https://www.abyss.finance) who have built their batch depositors in the open:
 
@@ -38,8 +38,8 @@ pip3 install slither-analyzer
 
 ``` shell
 pip3 install solc-select
-solc-select install 0.8.20
-solc-select use 0.8.20
+solc-select install 0.8.21
+solc-select use 0.8.21
 ```
 
 ## Developing
@@ -61,16 +61,8 @@ npm run lint:sol
 Most issues can be fixed with
 
 ``` shell
-npm run lint:js -- --fix
+npm run lint:ts -- --fix
 npm run fmt
-```
-
-### Testing
-
-To run the tests:
-
-``` shell
-npm run test
 ```
 
 ### Analysis
@@ -81,9 +73,46 @@ To run the analyzer:
 npm run analyze
 ```
 
-## Integration testing
+### Testing
 
-### Local Testnet
+
+To run the tests, you can run:
+
+``` shell
+npm run test
+```
+
+#### Manual testing
+
+Manual tests can be conducted using [`ethdo`](https://github.com/wealdtech/ethdo), which can be installed using `go`:
+
+``` shell
+go install github.com/wealdtech/ethdo@latest
+```
+
+``` shell
+export ETHDO_WALLET_NAME="Justfarming Development"
+export ETHDO_PASSPHRASE="Justfarming Development"
+export ETHDO_MNEMONIC="..."
+export ETHDO_ACCOUNT_INDEX=1
+export ETHDO_WITHDRAWAL_ADDRESS=0x...
+
+# Create a wallet
+ethdo wallet create --wallet="${ETHDO_WALLET_NAME}" --type="hd" --wallet-passphrase="${ETHDO_PASSPHRASE}" --mnemonic="${ETHDO_MNEMONIC}" --allow-weak-passphrases
+
+# Delete a wallet
+ethdo wallet delete --wallet="${ETHDO_WALLET_NAME}"
+
+# Create an account
+ethdo account create --account="${ETHDO_WALLET_NAME}/Validators/${ETHDO_ACCOUNT_INDEX}" --wallet-passphrase="${ETHDO_PASSPHRASE}" --passphrase="${ETHDO_PASSPHRASE}" --allow-weak-passphrases --path="m/12381/3600/${ETHDO_ACCOUNT_INDEX}/0/0"
+
+# Create deposit data for a new validator
+ethdo validator depositdata --validatoraccount="${ETHDO_WALLET_NAME}/Validators/${ETHDO_ACCOUNT_INDEX}" --depositvalue="32Ether" --withdrawaladdress="${ETHDO_WITHDRAWAL_ADDRESS}" --passphrase="${ETHDO_PASSPHRASE}"
+```
+
+#### Integration testing
+
+##### Local Testnet
 
 In addition to the previously mentioned requirements, you will need the following in order to run the local testnet:
 
@@ -91,6 +120,7 @@ In addition to the previously mentioned requirements, you will need the followin
 - [Install kurtosis](https://docs.kurtosis.com/next/install#ii-install-the-cli)
 
 Launch a local ethereum network:
+
 ``` shell
 kurtosis run --enclave justfarming-contracts config/localnet/main.star "$(cat ./config/localnet/params.json)"
 ```

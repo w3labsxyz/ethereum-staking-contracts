@@ -7,9 +7,9 @@
     "test": "HARDHAT_TESTING=true npx hardhat test",
     "test:localnet": "HARDHAT_TESTING=true npx hardhat --network localnet test",
     "lint:sol": "solhint 'contracts/**/*.sol' 'test/**/*.sol'",
-    "lint:ts": "eslint migrations scripts test",
-    "analyze": "slither contracts",
-    "fmt": "prettier --write contracts migrations test",
+    "lint:ts": "eslint scripts test",
+    "analyze": "slither contracts/lib",
+    "fmt": "prettier --write contracts scripts test",
     "deploy:localnet": "npx hardhat run --network localnet scripts/deploy.ts"
   },
   "repository": {
@@ -29,7 +29,7 @@
   "homepage": "https://github.com/justfarming/contracts#readme",
   "dependencies": {
     "@openzeppelin/contracts": "4.9.2",
-    "hardhat": "^2.16.0"
+    "hardhat": "^2.17.2"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^3.0.0",

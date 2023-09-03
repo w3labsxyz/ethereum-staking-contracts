@@ -27,6 +27,7 @@ module.exports = {
       rules: {
         "@typescript-eslint/no-var-requires": "off",
         "func-names": "off",
+        "no-unused-expressions": "off",
       },
     },
   ],

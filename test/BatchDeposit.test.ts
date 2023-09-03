@@ -1,124 +1,476 @@
-const { ethers } = require("hardhat");
-const { expect } = require("chai");
+import { ethers } from "hardhat";
+import { execSync } from "child_process";
+import { expect } from "chai";
 
-// Fake deposits
-const fakeData = {
-  pubkeys: [
-    "0xb397443cf61fbb6286550d9ef9b58a033deeb0378fe504ec09978d94eb87aedea244892853b994e27d6f77133fce723e",
-    "0xa50e1dfc528fe61d7c0b3bc118f94e7090e1b0b80328a8ec66783cecd74d3fc51459c76f2940dc905b9a32b34220945b",
-    "0x881e7056817dce7ac795b592f309c7b681ea7e5eadc5cfd39871112b69103e396ce91d0a3a9a333cb4f213ed43add094",
-  ],
-  creds: [
-    "0x00e53ca56e7f6412ca6024989d8a37cb0520d70d7e3472bf08fc629816603b5c",
-    "0x00e53ca56e7f6412ca6024989d8a37cb0520d70d7e3472bf08fc629816603b5c",
-    "0x00e53ca56e7f6412ca6024989d8a37cb0520d70d7e3472bf08fc629816603b5c",
-  ],
-  signatures: [
-    "0xa45d0dd7c44a73209d2377fbc3ded47e5af5ee38ade2e08c53551dd34b98248b8a1e1feb1912fb024033435927d47ad70adf10b1ee4a65bfc8ae1501962dee655bfeb5cefdff3389c2d9eadcc6fdc4e8ed340f0414b684168146c15aa4edbfed",
-    "0xa84fdfaceb817187a4436a8deafa6071bb32ae2510224d2423298de9e15a61dcdbbed42b1afded00c8ce5e8c02a8ba7b01b31a9a19e2fdb8b5c57859a481ffdd946271ca019b76b47cead66b05b8fd3422bbbeaf719da75f3d2e67bd215ae954",
-    "0x829b742e94203e5df52403bbd07a119abc67fa0b14326de99997f4619d3d62fbf122027a71fc6bae13f402380658fa32008d5c43b121a46d8417e99556f95c129da2763ab44ad4d9c657c8a59d1fe1783d732b2a28d77efc42bc648cf8cf21c1",
-  ],
-  dataRoots: [
-    "0x2c16c5739ec31a951e5551e828ef57ee2d6944b36cf674db9f884173289c7946",
-    "0xae358f6ef71c4eaa96cbb68b6e8e304c2348cce8f53424409a5bd76f29d357f3",
-    "0xb2bd009079582e1f6992c04773c867bf39ce1cfb9edd56ca22d7889f2eba508b",
-  ],
+const ETHDO_CONFIG = {
+  wallet: "Justfarming Development",
+  passphrase: "test",
+  mnemonic:
+    "giant issue aisle success illegal bike spike question tent bar rely arctic volcano long crawl hungry vocal artwork sniff fantasy very lucky have athlete",
+};
+const CMD_CREATE_WALLET = `ethdo wallet create --wallet="${ETHDO_CONFIG.wallet}" --type="hd" --wallet-passphrase="${ETHDO_CONFIG.passphrase}" --mnemonic="${ETHDO_CONFIG.mnemonic}" --allow-weak-passphrases`;
+const CMD_DELETE_WALLET = `ethdo wallet delete --wallet="${ETHDO_CONFIG.wallet}"`;
+const CMD_CREATE_ACCOUNT = (index: number) =>
+  `ethdo account create --account="${ETHDO_CONFIG.wallet}/Validators/${index}" --wallet-passphrase="${ETHDO_CONFIG.passphrase}" --passphrase="${ETHDO_CONFIG.passphrase}" --allow-weak-passphrases --path="m/12381/3600/${index}/0/0"`;
+const CMD_CREATE_DEPOSIT_DATA = (index: number, withdrawalAddress: string) =>
+  `ethdo validator depositdata --validatoraccount="${ETHDO_CONFIG.wallet}/Validators/${index}" --depositvalue="32Ether" --withdrawaladdress="${withdrawalAddress}" --passphrase="${ETHDO_CONFIG.passphrase}"`;
+
+type EthdoDepositData = {
+  name: string;
+  account: string;
+  pubkey: string;
+  withdrawal_credentials: string;
+  signature: string;
+  amount: number;
+  deposit_data_root: string;
+  deposit_message_root: string;
+  fork_version: string;
+  version: number;
 };
 
-describe("BatchDeposit", async function () {
+type ValidatorDepositSet = {
+  amount: number;
+  pubkeys: string[];
+  signatures: string[];
+  withdrawalAddress: string;
+};
+
+function createValidatorDeposits(
+  withdrawalAddress: string,
+  numberOfValidators: number
+): ValidatorDepositSet {
+  const pubkeys: string[] = [];
+  const signatures: string[] = [];
+
+  try {
+    execSync(CMD_CREATE_WALLET);
+  } catch (error) {
+    console.error(`Failed to create wallet`);
+    throw error;
+  }
+
+  for (let i = 0; i < numberOfValidators; i += 1) {
+    execSync(CMD_CREATE_ACCOUNT(i));
+    try {
+      const rawEthdoDepositData = execSync(
+        CMD_CREATE_DEPOSIT_DATA(i, withdrawalAddress)
+      );
+      const ethdoDepositData = JSON.parse(
+        rawEthdoDepositData.toString()
+      )[0] as EthdoDepositData;
+
+      pubkeys.push(ethdoDepositData.pubkey);
+      signatures.push(ethdoDepositData.signature);
+    } catch (error) {
+      console.error(`Failed to create deposit data for validator ${i}`);
+      execSync(CMD_DELETE_WALLET);
+      throw error;
+    }
+  }
+
+  try {
+    execSync(CMD_DELETE_WALLET);
+  } catch (error) {
+    console.error(`Failed to delete wallet`);
+    throw error;
+  }
+
+  return {
+    amount: ethers.parseEther((32 * numberOfValidators).toString(), "wei"),
+    pubkeys,
+    signatures,
+    withdrawalAddress,
+  };
+}
+
+describe("BatchDeposit", async () => {
   beforeEach(async function () {
-    this.deposit_contract = await ethers.deployContract("DepositContract", [], {
-      value: 0,
-    });
+    const [_deployer, justfarmingFeeWallet, customer] =
+      await ethers.getSigners();
 
-    await this.deposit_contract.waitForDeployment();
+    this.ethereumStakingDepositContract = await ethers.deployContract(
+      "DepositContract",
+      [],
+      {
+        value: 0,
+      }
+    );
 
-    this.contract = await ethers.deployContract(
+    await this.ethereumStakingDepositContract.waitForDeployment();
+
+    this.batchDepositContract = await ethers.deployContract(
       "BatchDeposit",
-      [this.deposit_contract.target],
+      [this.ethereumStakingDepositContract.target],
       { value: 0 }
     );
 
-    await this.contract.waitForDeployment();
+    await this.batchDepositContract.waitForDeployment();
+
+    this.stakingRewardsContract = await ethers.deployContract(
+      "StakingRewards",
+      [
+        this.batchDepositContract.target,
+        justfarmingFeeWallet.address,
+        customer.address,
+        1000,
+      ]
+    );
   });
 
-  it("can perform multiple deposits in one tx", async function () {
-    const [_owner, payee1] = await ethers.getSigners();
-    const numberOfNodes = 3;
-    const amountWei = ethers.parseEther((32 * numberOfNodes).toString(), "wei");
+  describe("validator registration", async () => {
+    it("is allowed with valid validator public keys", async function () {
+      const [owner, nobody] = await ethers.getSigners();
 
-    const res = await this.contract
-      .connect(payee1)
-      .batchDeposit(
-        fakeData.pubkeys,
-        fakeData.creds,
-        fakeData.signatures,
-        fakeData.dataRoots,
-        {
-          value: amountWei,
-        }
+      const validator1Pubkey = `0x${"01".repeat(48)}`;
+
+      await this.batchDepositContract
+        .connect(owner)
+        .registerValidators([validator1Pubkey]);
+
+      expect(
+        await this.batchDepositContract
+          .connect(nobody)
+          .isValidatorAvailable(validator1Pubkey)
+      ).to.be.true;
+    });
+
+    it("reverts if a validator is already registered", async function () {
+      const [owner] = await ethers.getSigners();
+
+      const validator1Pubkey = `0x${"01".repeat(48)}`;
+
+      await this.batchDepositContract
+        .connect(owner)
+        .registerValidators([validator1Pubkey]);
+
+      await expect(
+        this.batchDepositContract
+          .connect(owner)
+          .registerValidators([validator1Pubkey])
+      ).to.be.revertedWith("validator is already registered");
+    });
+
+    it("reverts if a validator public key is invalid", async function () {
+      const [owner] = await ethers.getSigners();
+
+      const validator1Pubkey = `0x${"01".repeat(47)}`;
+
+      await expect(
+        this.batchDepositContract
+          .connect(owner)
+          .registerValidators([validator1Pubkey])
+      ).to.be.revertedWith("public key must be 48 bytes long");
+    });
+  });
+
+  describe("batch deposits", async () => {
+    it("can perform multiple deposits in one tx", async function () {
+      const [owner, payee1] = await ethers.getSigners();
+      const numberOfNodes = 3;
+      const validatorDeposits = createValidatorDeposits(
+        this.stakingRewardsContract.target,
+        numberOfNodes
       );
 
-    await expect(res).to.changeEtherBalance(payee1, -amountWei);
-    await expect(res).to.changeEtherBalance(this.contract.target, 0);
-    await expect(res).to.changeEtherBalance(
-      this.deposit_contract.target,
-      amountWei
-    );
-    await expect(res)
-      .to.emit(this.contract, "DepositEvent")
-      .withArgs(payee1.address, numberOfNodes);
-  });
+      await this.batchDepositContract
+        .connect(owner)
+        .registerValidators(validatorDeposits.pubkeys);
 
-  it("reverts if transaction value is too low", async function () {
-    const [_owner, payee1] = await ethers.getSigners();
-    const amountWei = ethers.parseEther("1", "wei");
-
-    await expect(
-      this.contract
+      const res = await this.batchDepositContract
         .connect(payee1)
         .batchDeposit(
-          fakeData.pubkeys,
-          fakeData.creds,
-          fakeData.signatures,
-          fakeData.dataRoots,
+          validatorDeposits.withdrawalAddress,
+          validatorDeposits.pubkeys,
+          validatorDeposits.signatures,
           {
-            value: amountWei,
+            value: validatorDeposits.amount,
           }
+        );
+
+      const expectedPaymentAmount = ethers.parseEther(
+        (32 * numberOfNodes).toString(),
+        "wei"
+      );
+      await expect(res).to.changeEtherBalance(payee1, -expectedPaymentAmount);
+      await expect(res).to.changeEtherBalance(
+        this.batchDepositContract.target,
+        0
+      );
+      await expect(res).to.changeEtherBalance(
+        this.ethereumStakingDepositContract.target,
+        expectedPaymentAmount
+      );
+      await expect(res)
+        .to.emit(this.batchDepositContract, "DepositEvent")
+        .withArgs(payee1.address, numberOfNodes);
+    });
+
+    it("reverts if transaction value is too low", async function () {
+      const [owner, payee1] = await ethers.getSigners();
+      const amountWei = ethers.parseEther("1", "wei");
+      const validatorDeposits = createValidatorDeposits(
+        this.stakingRewardsContract.target,
+        1
+      );
+
+      await this.batchDepositContract
+        .connect(owner)
+        .registerValidators(validatorDeposits.pubkeys);
+
+      await expect(
+        this.batchDepositContract
+          .connect(payee1)
+          .batchDeposit(
+            validatorDeposits.withdrawalAddress,
+            validatorDeposits.pubkeys,
+            validatorDeposits.signatures,
+            {
+              value: amountWei,
+            }
+          )
+      ).to.be.revertedWith(
+        "the transaction amount must be equal to the number of validators to deploy multiplied by 32 ETH"
+      );
+    });
+
+    it("reverts if transaction value is too high", async function () {
+      const [owner, payee1] = await ethers.getSigners();
+      const amountWei = ethers.parseEther("100", "wei");
+      const validatorDeposits = createValidatorDeposits(
+        this.stakingRewardsContract.target,
+        1
+      );
+
+      await this.batchDepositContract
+        .connect(owner)
+        .registerValidators(validatorDeposits.pubkeys);
+
+      await expect(
+        this.batchDepositContract
+          .connect(payee1)
+          .batchDeposit(
+            validatorDeposits.withdrawalAddress,
+            validatorDeposits.pubkeys,
+            validatorDeposits.signatures,
+            {
+              value: amountWei,
+            }
+          )
+      ).to.be.revertedWith(
+        "the transaction amount must be equal to the number of validators to deploy multiplied by 32 ETH"
+      );
+    });
+
+    it("reverts if the number of pubkeys does not match the number of signatures", async function () {
+      const [owner, payee1] = await ethers.getSigners();
+      const numberOfNodes = 3;
+      const validatorDeposits = createValidatorDeposits(
+        this.stakingRewardsContract.target,
+        numberOfNodes
+      );
+
+      await this.batchDepositContract
+        .connect(owner)
+        .registerValidators(validatorDeposits.pubkeys);
+
+      await expect(
+        this.batchDepositContract
+          .connect(payee1)
+          .batchDeposit(
+            validatorDeposits.withdrawalAddress,
+            validatorDeposits.pubkeys,
+            validatorDeposits.signatures.slice(0, 1),
+            {
+              value: validatorDeposits.amount,
+            }
+          )
+      ).to.be.revertedWith(
+        "the number of signatures must match the number of public keys"
+      );
+    });
+
+    it("reverts if a public key is invalid", async function () {
+      const [owner, payee1] = await ethers.getSigners();
+      const numberOfNodes = 2;
+      const validatorDeposits = createValidatorDeposits(
+        this.stakingRewardsContract.target,
+        numberOfNodes
+      );
+
+      await this.batchDepositContract
+        .connect(owner)
+        .registerValidators(validatorDeposits.pubkeys);
+
+      await expect(
+        this.batchDepositContract
+          .connect(payee1)
+          .batchDeposit(
+            validatorDeposits.withdrawalAddress,
+            [validatorDeposits.pubkeys[0], "0x0000"],
+            validatorDeposits.signatures,
+            {
+              value: validatorDeposits.amount,
+            }
+          )
+      ).to.be.revertedWith("public key must be 48 bytes long");
+    });
+
+    it("reverts if a signature is invalid", async function () {
+      const [owner, payee1] = await ethers.getSigners();
+      const numberOfNodes = 2;
+      const validatorDeposits = createValidatorDeposits(
+        this.stakingRewardsContract.target,
+        numberOfNodes
+      );
+
+      await this.batchDepositContract
+        .connect(owner)
+        .registerValidators(validatorDeposits.pubkeys);
+
+      await expect(
+        this.batchDepositContract
+          .connect(payee1)
+          .batchDeposit(
+            validatorDeposits.withdrawalAddress,
+            validatorDeposits.pubkeys,
+            [validatorDeposits.signatures[0], "0x0000"],
+            {
+              value: validatorDeposits.amount,
+            }
+          )
+      ).to.be.revertedWith("signature must be 96 bytes long");
+    });
+
+    it("reverts if a validator is not available", async function () {
+      const [_owner, payee1] = await ethers.getSigners();
+      const numberOfNodes = 1;
+      const validatorDeposits = createValidatorDeposits(
+        this.stakingRewardsContract.target,
+        numberOfNodes
+      );
+
+      await expect(
+        this.batchDepositContract
+          .connect(payee1)
+          .batchDeposit(
+            validatorDeposits.withdrawalAddress,
+            validatorDeposits.pubkeys,
+            validatorDeposits.signatures,
+            {
+              value: validatorDeposits.amount,
+            }
+          )
+      ).to.be.revertedWith("validator is not available");
+    });
+
+    it("updates the available validators after a successful deposit", async function () {
+      const [owner, payee1] = await ethers.getSigners();
+      const numberOfNodes = 3;
+      const validatorDeposits = createValidatorDeposits(
+        this.stakingRewardsContract.target,
+        numberOfNodes
+      );
+
+      await this.batchDepositContract
+        .connect(owner)
+        .registerValidators(validatorDeposits.pubkeys.slice(0, 1));
+
+      expect(
+        await this.batchDepositContract.isValidatorAvailable(
+          validatorDeposits.pubkeys[0]
         )
-    ).to.be.revertedWith(
-      "BatchDeposit: The amount of ETH does not match the amount of nodes"
-    );
-  });
+      ).to.be.true;
+      expect(
+        await this.batchDepositContract.isValidatorAvailable(
+          validatorDeposits.pubkeys[1]
+        )
+      ).to.be.false;
+      expect(
+        await this.batchDepositContract.isValidatorAvailable(
+          validatorDeposits.pubkeys[2]
+        )
+      ).to.be.false;
 
-  it("reverts if transaction value is too high", async function () {
-    const [_owner, payee1] = await ethers.getSigners();
-    const amountWei = ethers.parseEther("100", "wei");
+      await this.batchDepositContract
+        .connect(owner)
+        .registerValidators(validatorDeposits.pubkeys.slice(1, 3));
 
-    await expect(
-      this.contract
+      expect(
+        await this.batchDepositContract.isValidatorAvailable(
+          validatorDeposits.pubkeys[0]
+        )
+      ).to.be.true;
+      expect(
+        await this.batchDepositContract.isValidatorAvailable(
+          validatorDeposits.pubkeys[1]
+        )
+      ).to.be.true;
+      expect(
+        await this.batchDepositContract.isValidatorAvailable(
+          validatorDeposits.pubkeys[2]
+        )
+      ).to.be.true;
+
+      await this.batchDepositContract
         .connect(payee1)
         .batchDeposit(
-          fakeData.pubkeys,
-          fakeData.creds,
-          fakeData.signatures,
-          fakeData.dataRoots,
+          validatorDeposits.withdrawalAddress,
+          validatorDeposits.pubkeys.slice(0, 1),
+          validatorDeposits.signatures.slice(0, 1),
           {
-            value: amountWei,
+            value: ethers.parseEther((32 * 1).toString()),
           }
+        );
+
+      expect(
+        await this.batchDepositContract.isValidatorAvailable(
+          validatorDeposits.pubkeys[0]
         )
-    ).to.be.revertedWith(
-      "BatchDeposit: The amount of ETH does not match the amount of nodes"
-    );
+      ).to.be.false;
+      expect(
+        await this.batchDepositContract.isValidatorAvailable(
+          validatorDeposits.pubkeys[1]
+        )
+      ).to.be.true;
+      expect(
+        await this.batchDepositContract.isValidatorAvailable(
+          validatorDeposits.pubkeys[2]
+        )
+      ).to.be.true;
+
+      await this.batchDepositContract
+        .connect(payee1)
+        .batchDeposit(
+          validatorDeposits.withdrawalAddress,
+          validatorDeposits.pubkeys.slice(1, 3),
+          validatorDeposits.signatures.slice(1, 3),
+          {
+            value: ethers.parseEther((32 * 2).toString()),
+          }
+        );
+
+      expect(
+        await this.batchDepositContract.isValidatorAvailable(
+          validatorDeposits.pubkeys[0]
+        )
+      ).to.be.false;
+      expect(
+        await this.batchDepositContract.isValidatorAvailable(
+          validatorDeposits.pubkeys[1]
+        )
+      ).to.be.false;
+      expect(
+        await this.batchDepositContract.isValidatorAvailable(
+          validatorDeposits.pubkeys[2]
+        )
+      ).to.be.false;
+    });
   });
 
   it("can transfer ownership", async function () {
     const [owner, owner2] = await ethers.getSigners();
-
-    expect(await this.contract.owner()).to.equal(owner.address);
-
-    await this.contract.transferOwnership(owner2.address);
-
-    expect(await this.contract.owner()).to.equal(owner2.address);
+    expect(await this.batchDepositContract.owner()).to.equal(owner.address);
+    await this.batchDepositContract.transferOwnership(owner2.address);
+    expect(await this.batchDepositContract.owner()).to.equal(owner2.address);
   });
 });
