@@ -28,10 +28,12 @@ TEKU_KEYS_DIRNAME = "teku-keys"
 TEKU_SECRETS_DIRNAME = "teku-secrets"
 
 
-def generate_justfarming_keystore(plan, mnemonic, num_validators):
+def generate_justfarming_keystore(plan, mnemonic, num_validators, capella_fork_epoch):
     service_name = prelaunch_data_generator_launcher.launch_prelaunch_data_generator(
         plan,
         {},
+        "el-justfarming-data",
+        capella_fork_epoch
     )
 
     start_index = 0
@@ -73,7 +75,7 @@ def generate_justfarming_keystore(plan, mnemonic, num_validators):
 
 def deploy_lighthouse(plan, validator_params):
     generate_justfarming_keystore(
-        plan, validator_params["mnemonic"], validator_params["num_validators"]
+        plan, validator_params["mnemonic"], validator_params["num_validators"], validator_params["capella_fork_epoch"]
     )
     plan.add_service(
         name="justfarming-lighthouse-beacon",
@@ -178,10 +180,11 @@ def deploy_lighthouse(plan, validator_params):
 
 def run(plan, args):
     plan.print("Spinning up the Ethereum Network")
-    plan.print(args)
     network_params = args["network"]
     validator_params = args["validator"]
-    eth_network_participants, cl_genesis_timestamp = eth_network_module.run(
+    plan.print(network_params)
+    plan.print(validator_params)
+    eth_network_participants, cl_genesis_timestamp, genesis_validators_root = eth_network_module.run(
         plan, network_params
     )
     plan.print("Launching an additional client pair")

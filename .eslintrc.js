@@ -7,8 +7,9 @@ module.exports = {
   },
   globals: {
     artifacts: "readonly",
-    contract: "readonly",
     assert: "readonly",
+    contract: "readonly",
+    ethers: "readonly",
     web3: true,
   },
   extends: [

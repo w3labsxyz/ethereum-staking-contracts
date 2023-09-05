@@ -37,7 +37,7 @@ type ValidatorDepositSet = {
 
 function createValidatorDeposits(
   withdrawalAddress: string,
-  numberOfValidators: number
+  numberOfValidators: number,
 ): ValidatorDepositSet {
   const pubkeys: string[] = [];
   const signatures: string[] = [];
@@ -53,10 +53,10 @@ function createValidatorDeposits(
     execSync(CMD_CREATE_ACCOUNT(i));
     try {
       const rawEthdoDepositData = execSync(
-        CMD_CREATE_DEPOSIT_DATA(i, withdrawalAddress)
+        CMD_CREATE_DEPOSIT_DATA(i, withdrawalAddress),
       );
       const ethdoDepositData = JSON.parse(
-        rawEthdoDepositData.toString()
+        rawEthdoDepositData.toString(),
       )[0] as EthdoDepositData;
 
       pubkeys.push(ethdoDepositData.pubkey);
@@ -93,7 +93,7 @@ describe("BatchDeposit", async () => {
       [],
       {
         value: 0,
-      }
+      },
     );
 
     await this.ethereumStakingDepositContract.waitForDeployment();
@@ -101,7 +101,7 @@ describe("BatchDeposit", async () => {
     this.batchDepositContract = await ethers.deployContract(
       "BatchDeposit",
       [this.ethereumStakingDepositContract.target],
-      { value: 0 }
+      { value: 0 },
     );
 
     await this.batchDepositContract.waitForDeployment();
@@ -113,7 +113,7 @@ describe("BatchDeposit", async () => {
         justfarmingFeeWallet.address,
         customer.address,
         1000,
-      ]
+      ],
     );
   });
 
@@ -130,7 +130,7 @@ describe("BatchDeposit", async () => {
       expect(
         await this.batchDepositContract
           .connect(nobody)
-          .isValidatorAvailable(validator1Pubkey)
+          .isValidatorAvailable(validator1Pubkey),
       ).to.be.true;
     });
 
@@ -146,7 +146,7 @@ describe("BatchDeposit", async () => {
       await expect(
         this.batchDepositContract
           .connect(owner)
-          .registerValidators([validator1Pubkey])
+          .registerValidators([validator1Pubkey]),
       ).to.be.revertedWith("validator is already registered");
     });
 
@@ -158,7 +158,7 @@ describe("BatchDeposit", async () => {
       await expect(
         this.batchDepositContract
           .connect(owner)
-          .registerValidators([validator1Pubkey])
+          .registerValidators([validator1Pubkey]),
       ).to.be.revertedWith("public key must be 48 bytes long");
     });
   });
@@ -169,7 +169,7 @@ describe("BatchDeposit", async () => {
       const numberOfNodes = 3;
       const validatorDeposits = createValidatorDeposits(
         this.stakingRewardsContract.target,
-        numberOfNodes
+        numberOfNodes,
       );
 
       await this.batchDepositContract
@@ -184,21 +184,21 @@ describe("BatchDeposit", async () => {
           validatorDeposits.signatures,
           {
             value: validatorDeposits.amount,
-          }
+          },
         );
 
       const expectedPaymentAmount = ethers.parseEther(
         (32 * numberOfNodes).toString(),
-        "wei"
+        "wei",
       );
       await expect(res).to.changeEtherBalance(payee1, -expectedPaymentAmount);
       await expect(res).to.changeEtherBalance(
         this.batchDepositContract.target,
-        0
+        0,
       );
       await expect(res).to.changeEtherBalance(
         this.ethereumStakingDepositContract.target,
-        expectedPaymentAmount
+        expectedPaymentAmount,
       );
       await expect(res)
         .to.emit(this.batchDepositContract, "DepositEvent")
@@ -210,7 +210,7 @@ describe("BatchDeposit", async () => {
       const amountWei = ethers.parseEther("1", "wei");
       const validatorDeposits = createValidatorDeposits(
         this.stakingRewardsContract.target,
-        1
+        1,
       );
 
       await this.batchDepositContract
@@ -226,10 +226,10 @@ describe("BatchDeposit", async () => {
             validatorDeposits.signatures,
             {
               value: amountWei,
-            }
-          )
+            },
+          ),
       ).to.be.revertedWith(
-        "the transaction amount must be equal to the number of validators to deploy multiplied by 32 ETH"
+        "the transaction amount must be equal to the number of validators to deploy multiplied by 32 ETH",
       );
     });
 
@@ -238,7 +238,7 @@ describe("BatchDeposit", async () => {
       const amountWei = ethers.parseEther("100", "wei");
       const validatorDeposits = createValidatorDeposits(
         this.stakingRewardsContract.target,
-        1
+        1,
       );
 
       await this.batchDepositContract
@@ -254,10 +254,10 @@ describe("BatchDeposit", async () => {
             validatorDeposits.signatures,
             {
               value: amountWei,
-            }
-          )
+            },
+          ),
       ).to.be.revertedWith(
-        "the transaction amount must be equal to the number of validators to deploy multiplied by 32 ETH"
+        "the transaction amount must be equal to the number of validators to deploy multiplied by 32 ETH",
       );
     });
 
@@ -266,7 +266,7 @@ describe("BatchDeposit", async () => {
       const numberOfNodes = 3;
       const validatorDeposits = createValidatorDeposits(
         this.stakingRewardsContract.target,
-        numberOfNodes
+        numberOfNodes,
       );
 
       await this.batchDepositContract
@@ -282,10 +282,10 @@ describe("BatchDeposit", async () => {
             validatorDeposits.signatures.slice(0, 1),
             {
               value: validatorDeposits.amount,
-            }
-          )
+            },
+          ),
       ).to.be.revertedWith(
-        "the number of signatures must match the number of public keys"
+        "the number of signatures must match the number of public keys",
       );
     });
 
@@ -294,7 +294,7 @@ describe("BatchDeposit", async () => {
       const numberOfNodes = 2;
       const validatorDeposits = createValidatorDeposits(
         this.stakingRewardsContract.target,
-        numberOfNodes
+        numberOfNodes,
       );
 
       await this.batchDepositContract
@@ -310,8 +310,8 @@ describe("BatchDeposit", async () => {
             validatorDeposits.signatures,
             {
               value: validatorDeposits.amount,
-            }
-          )
+            },
+          ),
       ).to.be.revertedWith("public key must be 48 bytes long");
     });
 
@@ -320,7 +320,7 @@ describe("BatchDeposit", async () => {
       const numberOfNodes = 2;
       const validatorDeposits = createValidatorDeposits(
         this.stakingRewardsContract.target,
-        numberOfNodes
+        numberOfNodes,
       );
 
       await this.batchDepositContract
@@ -336,8 +336,8 @@ describe("BatchDeposit", async () => {
             [validatorDeposits.signatures[0], "0x0000"],
             {
               value: validatorDeposits.amount,
-            }
-          )
+            },
+          ),
       ).to.be.revertedWith("signature must be 96 bytes long");
     });
 
@@ -346,7 +346,7 @@ describe("BatchDeposit", async () => {
       const numberOfNodes = 1;
       const validatorDeposits = createValidatorDeposits(
         this.stakingRewardsContract.target,
-        numberOfNodes
+        numberOfNodes,
       );
 
       await expect(
@@ -358,8 +358,8 @@ describe("BatchDeposit", async () => {
             validatorDeposits.signatures,
             {
               value: validatorDeposits.amount,
-            }
-          )
+            },
+          ),
       ).to.be.revertedWith("validator is not available");
     });
 
@@ -368,7 +368,7 @@ describe("BatchDeposit", async () => {
       const numberOfNodes = 3;
       const validatorDeposits = createValidatorDeposits(
         this.stakingRewardsContract.target,
-        numberOfNodes
+        numberOfNodes,
       );
 
       await this.batchDepositContract
@@ -377,18 +377,18 @@ describe("BatchDeposit", async () => {
 
       expect(
         await this.batchDepositContract.isValidatorAvailable(
-          validatorDeposits.pubkeys[0]
-        )
+          validatorDeposits.pubkeys[0],
+        ),
       ).to.be.true;
       expect(
         await this.batchDepositContract.isValidatorAvailable(
-          validatorDeposits.pubkeys[1]
-        )
+          validatorDeposits.pubkeys[1],
+        ),
       ).to.be.false;
       expect(
         await this.batchDepositContract.isValidatorAvailable(
-          validatorDeposits.pubkeys[2]
-        )
+          validatorDeposits.pubkeys[2],
+        ),
       ).to.be.false;
 
       await this.batchDepositContract
@@ -397,18 +397,18 @@ describe("BatchDeposit", async () => {
 
       expect(
         await this.batchDepositContract.isValidatorAvailable(
-          validatorDeposits.pubkeys[0]
-        )
+          validatorDeposits.pubkeys[0],
+        ),
       ).to.be.true;
       expect(
         await this.batchDepositContract.isValidatorAvailable(
-          validatorDeposits.pubkeys[1]
-        )
+          validatorDeposits.pubkeys[1],
+        ),
       ).to.be.true;
       expect(
         await this.batchDepositContract.isValidatorAvailable(
-          validatorDeposits.pubkeys[2]
-        )
+          validatorDeposits.pubkeys[2],
+        ),
       ).to.be.true;
 
       await this.batchDepositContract
@@ -419,23 +419,23 @@ describe("BatchDeposit", async () => {
           validatorDeposits.signatures.slice(0, 1),
           {
             value: ethers.parseEther((32 * 1).toString()),
-          }
+          },
         );
 
       expect(
         await this.batchDepositContract.isValidatorAvailable(
-          validatorDeposits.pubkeys[0]
-        )
+          validatorDeposits.pubkeys[0],
+        ),
       ).to.be.false;
       expect(
         await this.batchDepositContract.isValidatorAvailable(
-          validatorDeposits.pubkeys[1]
-        )
+          validatorDeposits.pubkeys[1],
+        ),
       ).to.be.true;
       expect(
         await this.batchDepositContract.isValidatorAvailable(
-          validatorDeposits.pubkeys[2]
-        )
+          validatorDeposits.pubkeys[2],
+        ),
       ).to.be.true;
 
       await this.batchDepositContract
@@ -446,23 +446,23 @@ describe("BatchDeposit", async () => {
           validatorDeposits.signatures.slice(1, 3),
           {
             value: ethers.parseEther((32 * 2).toString()),
-          }
+          },
         );
 
       expect(
         await this.batchDepositContract.isValidatorAvailable(
-          validatorDeposits.pubkeys[0]
-        )
+          validatorDeposits.pubkeys[0],
+        ),
       ).to.be.false;
       expect(
         await this.batchDepositContract.isValidatorAvailable(
-          validatorDeposits.pubkeys[1]
-        )
+          validatorDeposits.pubkeys[1],
+        ),
       ).to.be.false;
       expect(
         await this.batchDepositContract.isValidatorAvailable(
-          validatorDeposits.pubkeys[2]
-        )
+          validatorDeposits.pubkeys[2],
+        ),
       ).to.be.false;
     });
   });
