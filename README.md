@@ -143,6 +143,8 @@ df9bb6de5d3dc59595bcaa676397d837ff49441d211878c024eabda2cd067c9f
 Find the rpc port of your locally running execution client by running
 ``` shell
 npx hardhat update-rpc-port
+# Remember to source the env
+source .env
 ```
 
 This command updates the local environment (`.env`) used for the `networks.localnet` configuration in [./hardhat.config.ts](/hardhat.config.ts) to use this port.
@@ -164,7 +166,7 @@ To deposit to one or multiple of these validators, you'll need to first create d
 export ETHDO_CONFIG_WALLET=Justfarming Development
 export ETHDO_CONFIG_PASSPHRASE=test
 export ETHDO_CONFIG_MNEMONIC="flee title shaft evoke stable vote injury ten strong farm obtain pause record rural device cotton hollow echo good acquire scrub buzz vacant liar"
-export ETHDO_CONFIG_WITHDRAWAL_ADDRESS=0xBFF5cD0aA560e1d1C6B1E2C347860aDAe1bd8235
+export ETHDO_CONFIG_WITHDRAWAL_ADDRESS=$JF_STAKING_REWARDS_CONTRACT_ADDRESS
 
 ethdo wallet create --wallet="${ETHDO_CONFIG_WALLET}" --type="hd" --wallet-passphrase="${ETHDO_CONFIG_PASSPHRASE}" --mnemonic="${ETHDO_CONFIG_MNEMONIC}" --allow-weak-passphrases
 
@@ -198,11 +200,20 @@ npx hardhat batch-deposit:is-validator-available --network localnet --batch-depo
 npx hardhat batch-deposit:is-validator-available --network localnet --batch-deposit-contract-address $JF_BATCH_DEPOSIT_CONTRACT_ADDRESS --validator-public-key 0x96b26551fa223f8509b13e651d4bde3749d93df13ca2c45f89d2d96a19cfaaf6bb6600cba7ec4f280de246479af4472d
 
 # deposit to multiple validators
-npx hardhat batch-deposit:batch-deposit --network localnet --batch-deposit-contract-address $JF_BATCH_DEPOSIT_CONTRACT_ADDRESS --staking-rewards-contract-address $JF_STAKING_REWARDS_CONTRACT_ADDRESS --validator-public-keys "0x8e1b5d5d2938c6ae35445875f5a6410d8a8f6b93b486ee795632ef1cc9329849e91098a4d86108199ea9f017a4f57ce3,0x8c35be170b4741be1314e22d46e0a8ddca9d08c182bcd9f37e85a1fd1ea0d37dbcf972e13a86f2ba369066d098140694,0xb8c4b28d46a73aa82c400b7f159645b097953d37e2ca98908bc236b5b6292a6ba3a0612e8454867a3f9f38a1c8184d0f" --validator-signatures "0xb74c323f401c0727c7b00d2d3ff9cef9bc07336e688e41f90d985b3c18a21b8587cdc9a5a578e39cf5d92fadf2ae694505bd6d47b9be1aabbeac4c5266d497186020f49be70acba42b6fa7c81821dda5f2def5216a28053ac57cffe1313a0d81,0xaba1feea4fd982cee7672accba140055b797f6efae1f63eb6e40a72aa136931cd5a0583e53ebe0415f3914a48c3fd1571981db7a6d9d279555ac40371af8d9e858c71e25f71b39cad9a07a1fa61730317a4483d801a950bf5de1d7f900f3aa57,0xaf04c6f86bed903afea1b452e83f0da7ab392e5970dc363cdba34cc2a4acf36b4543adc8f50728638a4d4f12baf2486c07f272c19aead4be251470e9db237abcba2d2593f128a2ea07d9d93925784ad04ba842a108148956eaa8ed341b3ff70e"
+npx hardhat batch-deposit:batch-deposit --network localnet --batch-deposit-contract-address $JF_BATCH_DEPOSIT_CONTRACT_ADDRESS --staking-rewards-contract-address $JF_STAKING_REWARDS_CONTRACT_ADDRESS --validator-public-keys "0x8e1b5d5d2938c6ae35445875f5a6410d8a8f6b93b486ee795632ef1cc9329849e91098a4d86108199ea9f017a4f57ce3,0x8c35be170b4741be1314e22d46e0a8ddca9d08c182bcd9f37e85a1fd1ea0d37dbcf972e13a86f2ba369066d098140694,0xb8c4b28d46a73aa82c400b7f159645b097953d37e2ca98908bc236b5b6292a6ba3a0612e8454867a3f9f38a1c8184d0f" --validator-signatures "0xb11f2efc52a6cc98078640af1df1c5397e3b808e70ddcba54fd02830a9f76444a45fe55fd606a5ceb5b493d28308f87015fdab1ac2a7c1807735d3447790e07730f3ccef8855c4e62439f4616beae2b90b25846fc5a6642fe08d005044e788f5,0xb3eb9a1ed6b18fef0977566a5419b4de9d9033eea7151c75975c515b580961ef0960c6f7be41f90079d9ea4006f6f583144fe06c25f3e2f9b545355c049a9e7806b981f4f894c5882de6bf056f51cf514faa6b866358cd82399cf0502eebef5b,0xa8d27c38d5769d4d7e2a3c6a824992d439c93ef4055339bb3504cd3a23bdff5324e9622a807ea36c96b0ff6cbd63119d126c81c9064a8fb626e6f4e02071f9308bfee422ef4cd7fd0e27c4e9d427df917bd62f4e11a8037c25a89a863c614fe4"
 
 # deploy the StakingRewards contract
 npx hardhat staking-rewards:deploy --network localnet --batch-deposit-contract-address $JF_BATCH_DEPOSIT_CONTRACT_ADDRESS --fee-address 0x4E9A3d9D1cd2A2b2371b8b3F489aE72259886f1A --fee-basis-points 1000 --rewards-address 0xdF8466f277964Bb7a0FFD819403302C34DCD530A
 # export the address afterwards: export JF_STAKING_REWARDS_CONTRACT_ADDRESS=0xBFF5cD0aA560e1d1C6B1E2C347860aDAe1bd8235
+
+# excute a native ethereum staking deposit
+npx hardhat native-staking:deposit --network localnet --ethereum-deposit-contract-address 0x4242424242424242424242424242424242424242 --deposit-data-path /tmp/justfarming-local-validator-depositdata-16.json
+
+# Listing all deposits
+npx hardhat --network localnet debug:list-deposits --ethereum-deposit-contract-address 0x4242424242424242424242424242424242424242
+
+# debugging a transaction
+npx hardhat --network localnet debug:transaction --tx-hash 0xbc0ce66317705141485622a5c30e91f6a54fbae7a601056563887688c72e6949
 ```
 
 ``` bash
@@ -217,6 +228,18 @@ docker logs -f $(docker ps | grep justfarming-lighthouse-validator | awk '{print
 ```
 
 this is especially helpful for observing validators become active upon using `BatchDepoit.sol`.
+
+You can use `ethdo` to inspect validators:
+
+``` shell
+# Get general chain info
+ethdo --connection=http://localhost:$CL_RPC_PORT chain info
+
+# Get info about validator #1
+ethdo --connection=http://localhost:$CL_RPC_PORT validator info --validator 0x8e1b5d5d2938c6ae35445875f5a6410d8a8f6b93b486ee795632ef1cc9329849e91098a4d86108199ea9f017a4f57ce3
+ethdo --connection=http://localhost:$CL_RPC_PORT validator info --validator 0x8c35be170b4741be1314e22d46e0a8ddca9d08c182bcd9f37e85a1fd1ea0d37dbcf972e13a86f2ba369066d098140694
+ethdo --connection=http://localhost:$CL_RPC_PORT validator info --validator 0xb8c4b28d46a73aa82c400b7f159645b097953d37e2ca98908bc236b5b6292a6ba3a0612e8454867a3f9f38a1c8184d0f
+```
 
 ###### Cleanup
 

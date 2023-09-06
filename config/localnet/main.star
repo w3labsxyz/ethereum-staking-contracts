@@ -32,7 +32,7 @@ def generate_justfarming_keystore(plan, mnemonic, num_validators, capella_fork_e
     service_name = prelaunch_data_generator_launcher.launch_prelaunch_data_generator(
         plan,
         {},
-        "el-justfarming-data",
+        "jf-genesis-data",
         capella_fork_epoch
     )
 
@@ -78,67 +78,9 @@ def deploy_lighthouse(plan, validator_params):
         plan, validator_params["mnemonic"], validator_params["num_validators"], validator_params["capella_fork_epoch"]
     )
     plan.add_service(
-        name="justfarming-lighthouse-beacon",
-        config=ServiceConfig(
-            image="sigp/lighthouse:v3.5.0",
-            ports={
-                "http": PortSpec(
-                    number=4000, transport_protocol="TCP", application_protocol="http"
-                ),
-                "metrics": PortSpec(
-                    number=5054, transport_protocol="TCP", application_protocol="http"
-                ),
-                "tcp-discovery": PortSpec(
-                    number=9000, transport_protocol="TCP", application_protocol=""
-                ),
-                "udp-discovery": PortSpec(
-                    number=9000, transport_protocol="UDP", application_protocol=""
-                ),
-            },
-            files={"/genesis": "cl-genesis-data"},
-            cmd=[
-                "lighthouse",
-                "beacon_node",
-                "--debug-level=info",
-                "--datadir=/consensus-data",
-                "--testnet-dir=/genesis/output",
-                "--disable-enr-auto-update",
-                "--enr-address=KURTOSIS_IP_ADDR_PLACEHOLDER",
-                "--enr-udp-port=9000",
-                "--enr-tcp-port=9000",
-                "--listen-address=0.0.0.0",
-                "--port=9000",
-                "--http",
-                "--http-address=0.0.0.0",
-                "--http-port=4000",
-                "--http-allow-sync-stalled",
-                "--disable-packet-filter",
-                "--execution-endpoints=http://el-client-0:8551",
-                "--jwt-secrets=/genesis/output/jwtsecret",
-                "--suggested-fee-recipient=0x0000000000000000000000000000000000000000",
-                "--subscribe-all-subnets",
-                "--metrics",
-                "--metrics-address=0.0.0.0",
-                "--metrics-allow-origin=*",
-                "--metrics-port=5054",
-            ],
-            env_vars={"RUST_BACKTRACE": "full"},
-            private_ip_address_placeholder="KURTOSIS_IP_ADDR_PLACEHOLDER",
-            ready_conditions=ReadyCondition(
-                recipe=GetHttpRequestRecipe(
-                    port_id="http", endpoint="/lighthouse/health"
-                ),
-                field="code",
-                assertion="IN",
-                target_value=[200, 206],
-                timeout="15m",
-            ),
-        ),
-    )
-    plan.add_service(
         name="justfarming-lighthouse-validator",
         config=ServiceConfig(
-            image="sigp/lighthouse:v3.5.0",
+            image="sigp/lighthouse:v4.4.1",
             ports={
                 "http": PortSpec(
                     number=5042,
@@ -166,7 +108,7 @@ def deploy_lighthouse(plan, validator_params):
                 "--unencrypted-http-transport",
                 "--http-address=0.0.0.0",
                 "--http-port=5042",
-                "--beacon-nodes=http://justfarming-lighthouse-beacon:4000",
+                "--beacon-nodes=http://cl-1-lighthouse-geth:4000",
                 "--suggested-fee-recipient=0x0000000000000000000000000000000000000000",
                 "--metrics",
                 "--metrics-address=0.0.0.0",
