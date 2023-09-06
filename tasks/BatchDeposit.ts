@@ -91,12 +91,17 @@ task(
     "validatorSignatures",
     "The signatures of multiple validator (comma-separated)",
   )
+  .addParam(
+    "validatorDepositDataRoots",
+    "The deposit data roots of multiple validator (comma-separated)",
+  )
   .setAction(
     async ({
       batchDepositContractAddress,
       stakingRewardsContractAddress,
       validatorPublicKeys,
       validatorSignatures,
+      validatorDepositDataRoots,
     }) => {
       const [_deployer] = await ethers.getSigners();
 
@@ -115,6 +120,7 @@ task(
         stakingRewardsContractAddress,
         publicKeys,
         validatorSignatures.split(","),
+        validatorDepositDataRoots.split(","),
         { value },
       );
 

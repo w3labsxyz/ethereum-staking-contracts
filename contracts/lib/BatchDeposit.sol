@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.21;
+pragma solidity 0.8.21;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
@@ -21,7 +21,6 @@ contract BatchDeposit is Ownable, ReentrancyGuard {
     uint256 constant SIGNATURE_LENGTH = 96;
     uint256 constant MAX_VALIDATORS_PER_BATCH = 100;
     uint256 constant DEPOSIT_AMOUNT = 32 ether;
-    uint64 constant DEPOSIT_AMOUNT_GWEI = uint64(DEPOSIT_AMOUNT / 1 gwei);
 
     mapping(bytes => bool) private _isValidatorAvailable;
 
@@ -92,6 +91,7 @@ contract BatchDeposit is Ownable, ReentrancyGuard {
      * @param stakingRewardsContract The address of an instance of the StakingRewards contract.
      * @param pubkeys The BLS12-381 public keys of the validators.
      * @param signatures The BLS12-381 signatures of the deposit messages.
+     * @param depositDataRoots The deposit data roots of the validators.
      *
      * @notice
      * Only Type 1 withdrawal credentials are supported. The withdrawal
@@ -105,16 +105,13 @@ contract BatchDeposit is Ownable, ReentrancyGuard {
      * The following parameters must be provided in the same order:
      * - The BLS12-381 public keys of the validators.
      * - The BLS12-381 signatures of the deposit messages.
-     *
-     * Also note that deposit data roots are not required as they are calculated
-     * by this contract. This is not the most gas efficient way to deposit
-     * validators, but it is enabling improved reviewability of batch deposits
-     * especially on hardware wallets.
+     * - The deposit data roots of the validators.
      */
     function batchDeposit(
         address stakingRewardsContract,
         bytes[] calldata pubkeys,
-        bytes[] calldata signatures
+        bytes[] calldata signatures,
+        bytes32[] calldata depositDataRoots
     ) external payable nonReentrant {
         uint256 numberOfValidators = pubkeys.length;
 
@@ -139,6 +136,10 @@ contract BatchDeposit is Ownable, ReentrancyGuard {
             signatures.length == pubkeys.length,
             "the number of signatures must match the number of public keys"
         );
+        require(
+            depositDataRoots.length == pubkeys.length,
+            "the number of deposit data roots must match the number of public keys"
+        );
 
         for (uint256 i = 0; i < numberOfValidators; ++i) {
             require(
@@ -154,20 +155,13 @@ contract BatchDeposit is Ownable, ReentrancyGuard {
                 "validator is not available"
             );
 
-            bytes32 depositDataRoot = _getDepositDataRoot(
-                DEPOSIT_AMOUNT_GWEI,
-                withdrawalCredential,
-                pubkeys[i],
-                signatures[i]
-            );
-
             _isValidatorAvailable[pubkeys[i]] = false;
 
             IDepositContract(depositContract).deposit{value: DEPOSIT_AMOUNT}(
                 pubkeys[i],
                 withdrawalCredential,
                 signatures[i],
-                depositDataRoot
+                depositDataRoots[i]
             );
         }
 
@@ -176,77 +170,5 @@ contract BatchDeposit is Ownable, ReentrancyGuard {
         );
 
         emit DepositEvent(msg.sender, numberOfValidators);
-    }
-
-    /**
-     * @dev Calculate the deposit root hash for a given deposit.
-     *
-     * @param depositAmount The amount of ETH to be deposited in gwei.
-     * @param withdrawalCredential The withdrawal credentials of the validator.
-     * @param pubkey The BLS12-381 public key of the validator.
-     * @param signature The BLS12-381 signature of the deposit message.
-     *
-     * @return The deposit root hash.
-     *
-     * @notice
-     * This function is implemented in accordance with the official Ethereum
-     * specification. See the following link for the original implementation:
-     * https://github.com/ethereum/consensus-specs/blob/e3a939e439d6c05356c9c29c5cd347384180bc01/
-     * ... solidity_deposit_contract/deposit_contract.sol#L129
-     */
-    function _getDepositDataRoot(
-        uint64 depositAmount,
-        bytes memory withdrawalCredential,
-        bytes calldata pubkey,
-        bytes calldata signature
-    ) internal pure returns (bytes32) {
-        bytes32 pubkey_root = sha256(abi.encodePacked(pubkey, bytes16(0)));
-        bytes32 signature_root = sha256(
-            abi.encodePacked(
-                sha256(abi.encodePacked(signature[:64])),
-                sha256(abi.encodePacked(signature[64:], bytes32(0)))
-            )
-        );
-        return
-            sha256(
-                abi.encodePacked(
-                    sha256(abi.encodePacked(pubkey_root, withdrawalCredential)),
-                    sha256(
-                        abi.encodePacked(
-                            _toLittleEndian64(depositAmount),
-                            bytes24(0),
-                            signature_root
-                        )
-                    )
-                )
-            );
-    }
-
-    /**
-     * @dev Convert a uint64 to a little endian byte array.
-     *
-     * @param value The uint64 value to convert.
-     *
-     * @return ret The little endian byte array.
-     *
-     * @notice
-     * This function is copied from the official Ethereum specification:
-     * https://github.com/ethereum/consensus-specs/blob/e3a939e439d6c05356c9c29c5cd347384180bc01/
-     * ... solidity_deposit_contract/deposit_contract.sol#L165
-     */
-    function _toLittleEndian64(
-        uint64 value
-    ) internal pure returns (bytes memory ret) {
-        ret = new bytes(8);
-        bytes8 bytesValue = bytes8(value);
-        // Byteswapping during copying to bytes.
-        ret[0] = bytesValue[7];
-        ret[1] = bytesValue[6];
-        ret[2] = bytesValue[5];
-        ret[3] = bytesValue[4];
-        ret[4] = bytesValue[3];
-        ret[5] = bytesValue[2];
-        ret[6] = bytesValue[1];
-        ret[7] = bytesValue[0];
     }
 }

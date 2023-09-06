@@ -181,6 +181,9 @@ ls /tmp/justfarming-local-validator-*.json | xargs -I {} jq -r '.[0].pubkey' {} 
 
 # Get signatures
 ls /tmp/justfarming-local-validator-*.json | xargs -I {} jq -r '.[0].signature' {} | awk 'BEGIN{ORS=","} {print}' | sed 's/,$/\n/' > /tmp/justfarming-local-validator-signatures.txt
+
+# Get deposit data roots
+ls /tmp/justfarming-local-validator-*.json | xargs -I {} jq -r '.[0].deposit_data_root' {} | awk 'BEGIN{ORS=","} {print}' | sed 's/,$/\n/' > /tmp/justfarming-local-validator-deposit-data-roots.txt
 ```
 
 You can now extract the respective depositdata from the created depositdata files in `/tmp`. For example, get the pubkeys for registering them with the BatchDeposit contract:
@@ -200,7 +203,7 @@ npx hardhat batch-deposit:is-validator-available --network localnet --batch-depo
 npx hardhat batch-deposit:is-validator-available --network localnet --batch-deposit-contract-address $JF_BATCH_DEPOSIT_CONTRACT_ADDRESS --validator-public-key 0x96b26551fa223f8509b13e651d4bde3749d93df13ca2c45f89d2d96a19cfaaf6bb6600cba7ec4f280de246479af4472d
 
 # deposit to multiple validators
-npx hardhat batch-deposit:batch-deposit --network localnet --batch-deposit-contract-address $JF_BATCH_DEPOSIT_CONTRACT_ADDRESS --staking-rewards-contract-address $JF_STAKING_REWARDS_CONTRACT_ADDRESS --validator-public-keys "0x8e1b5d5d2938c6ae35445875f5a6410d8a8f6b93b486ee795632ef1cc9329849e91098a4d86108199ea9f017a4f57ce3,0x8c35be170b4741be1314e22d46e0a8ddca9d08c182bcd9f37e85a1fd1ea0d37dbcf972e13a86f2ba369066d098140694,0xb8c4b28d46a73aa82c400b7f159645b097953d37e2ca98908bc236b5b6292a6ba3a0612e8454867a3f9f38a1c8184d0f" --validator-signatures "0xb11f2efc52a6cc98078640af1df1c5397e3b808e70ddcba54fd02830a9f76444a45fe55fd606a5ceb5b493d28308f87015fdab1ac2a7c1807735d3447790e07730f3ccef8855c4e62439f4616beae2b90b25846fc5a6642fe08d005044e788f5,0xb3eb9a1ed6b18fef0977566a5419b4de9d9033eea7151c75975c515b580961ef0960c6f7be41f90079d9ea4006f6f583144fe06c25f3e2f9b545355c049a9e7806b981f4f894c5882de6bf056f51cf514faa6b866358cd82399cf0502eebef5b,0xa8d27c38d5769d4d7e2a3c6a824992d439c93ef4055339bb3504cd3a23bdff5324e9622a807ea36c96b0ff6cbd63119d126c81c9064a8fb626e6f4e02071f9308bfee422ef4cd7fd0e27c4e9d427df917bd62f4e11a8037c25a89a863c614fe4"
+npx hardhat batch-deposit:batch-deposit --network localnet --batch-deposit-contract-address $JF_BATCH_DEPOSIT_CONTRACT_ADDRESS --staking-rewards-contract-address $JF_STAKING_REWARDS_CONTRACT_ADDRESS --validator-public-keys "0x8e1b5d5d2938c6ae35445875f5a6410d8a8f6b93b486ee795632ef1cc9329849e91098a4d86108199ea9f017a4f57ce3,0x8c35be170b4741be1314e22d46e0a8ddca9d08c182bcd9f37e85a1fd1ea0d37dbcf972e13a86f2ba369066d098140694,0xb8c4b28d46a73aa82c400b7f159645b097953d37e2ca98908bc236b5b6292a6ba3a0612e8454867a3f9f38a1c8184d0f" --validator-signatures "..." --validator-deposit-data-roots "..."
 
 # deploy the StakingRewards contract
 npx hardhat staking-rewards:deploy --network localnet --batch-deposit-contract-address $JF_BATCH_DEPOSIT_CONTRACT_ADDRESS --fee-address 0x4E9A3d9D1cd2A2b2371b8b3F489aE72259886f1A --fee-basis-points 1000 --rewards-address 0xdF8466f277964Bb7a0FFD819403302C34DCD530A

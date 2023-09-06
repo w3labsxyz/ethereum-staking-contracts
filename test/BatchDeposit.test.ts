@@ -30,6 +30,7 @@ type EthdoDepositData = {
 
 type ValidatorDepositSet = {
   amount: number;
+  depositDataRoots: string[];
   pubkeys: string[];
   signatures: string[];
   withdrawalAddress: string;
@@ -39,6 +40,7 @@ function createValidatorDeposits(
   withdrawalAddress: string,
   numberOfValidators: number,
 ): ValidatorDepositSet {
+  const depositDataRoots: string[] = [];
   const pubkeys: string[] = [];
   const signatures: string[] = [];
 
@@ -61,6 +63,7 @@ function createValidatorDeposits(
 
       pubkeys.push(ethdoDepositData.pubkey);
       signatures.push(ethdoDepositData.signature);
+      depositDataRoots.push(ethdoDepositData.deposit_data_root);
     } catch (error) {
       console.error(`Failed to create deposit data for validator ${i}`);
       execSync(CMD_DELETE_WALLET);
@@ -77,6 +80,7 @@ function createValidatorDeposits(
 
   return {
     amount: ethers.parseEther((32 * numberOfValidators).toString(), "wei"),
+    depositDataRoots,
     pubkeys,
     signatures,
     withdrawalAddress,
@@ -182,6 +186,7 @@ describe("BatchDeposit", async () => {
           validatorDeposits.withdrawalAddress,
           validatorDeposits.pubkeys,
           validatorDeposits.signatures,
+          validatorDeposits.depositDataRoots,
           {
             value: validatorDeposits.amount,
           },
@@ -224,6 +229,7 @@ describe("BatchDeposit", async () => {
             validatorDeposits.withdrawalAddress,
             validatorDeposits.pubkeys,
             validatorDeposits.signatures,
+            validatorDeposits.depositDataRoots,
             {
               value: amountWei,
             },
@@ -252,6 +258,7 @@ describe("BatchDeposit", async () => {
             validatorDeposits.withdrawalAddress,
             validatorDeposits.pubkeys,
             validatorDeposits.signatures,
+            validatorDeposits.depositDataRoots,
             {
               value: amountWei,
             },
@@ -280,12 +287,42 @@ describe("BatchDeposit", async () => {
             validatorDeposits.withdrawalAddress,
             validatorDeposits.pubkeys,
             validatorDeposits.signatures.slice(0, 1),
+            validatorDeposits.depositDataRoots,
             {
               value: validatorDeposits.amount,
             },
           ),
       ).to.be.revertedWith(
         "the number of signatures must match the number of public keys",
+      );
+    });
+
+    it("reverts if the number of pubkeys does not match the number of deposit data roots", async function () {
+      const [owner, payee1] = await ethers.getSigners();
+      const numberOfNodes = 3;
+      const validatorDeposits = createValidatorDeposits(
+        this.stakingRewardsContract.target,
+        numberOfNodes,
+      );
+
+      await this.batchDepositContract
+        .connect(owner)
+        .registerValidators(validatorDeposits.pubkeys);
+
+      await expect(
+        this.batchDepositContract
+          .connect(payee1)
+          .batchDeposit(
+            validatorDeposits.withdrawalAddress,
+            validatorDeposits.pubkeys,
+            validatorDeposits.signatures,
+            validatorDeposits.depositDataRoots.slice(0, 1),
+            {
+              value: validatorDeposits.amount,
+            },
+          ),
+      ).to.be.revertedWith(
+        "the number of deposit data roots must match the number of public keys",
       );
     });
 
@@ -308,6 +345,7 @@ describe("BatchDeposit", async () => {
             validatorDeposits.withdrawalAddress,
             [validatorDeposits.pubkeys[0], "0x0000"],
             validatorDeposits.signatures,
+            validatorDeposits.depositDataRoots,
             {
               value: validatorDeposits.amount,
             },
@@ -334,6 +372,7 @@ describe("BatchDeposit", async () => {
             validatorDeposits.withdrawalAddress,
             validatorDeposits.pubkeys,
             [validatorDeposits.signatures[0], "0x0000"],
+            validatorDeposits.depositDataRoots,
             {
               value: validatorDeposits.amount,
             },
@@ -356,6 +395,7 @@ describe("BatchDeposit", async () => {
             validatorDeposits.withdrawalAddress,
             validatorDeposits.pubkeys,
             validatorDeposits.signatures,
+            validatorDeposits.depositDataRoots,
             {
               value: validatorDeposits.amount,
             },
@@ -417,6 +457,7 @@ describe("BatchDeposit", async () => {
           validatorDeposits.withdrawalAddress,
           validatorDeposits.pubkeys.slice(0, 1),
           validatorDeposits.signatures.slice(0, 1),
+          validatorDeposits.depositDataRoots.slice(0, 1),
           {
             value: ethers.parseEther((32 * 1).toString()),
           },
@@ -444,6 +485,7 @@ describe("BatchDeposit", async () => {
           validatorDeposits.withdrawalAddress,
           validatorDeposits.pubkeys.slice(1, 3),
           validatorDeposits.signatures.slice(1, 3),
+          validatorDeposits.depositDataRoots.slice(1, 3),
           {
             value: ethers.parseEther((32 * 2).toString()),
           },
