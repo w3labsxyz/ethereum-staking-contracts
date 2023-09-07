@@ -133,7 +133,7 @@ contract StakingRewards is AccessControl, IStakingRewardsContract {
             billableRewards = totalBalance - _exitedStake;
         }
 
-        if (account == _feeRecipient) {
+        if (account == _feeRecipient && billableRewards > 0) {
             uint256 totalFees = (billableRewards * _feeBasisPoints) / 10 ** 4;
             uint256 releasedFees = released(_feeRecipient);
             return totalFees - releasedFees;
