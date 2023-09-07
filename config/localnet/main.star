@@ -1,17 +1,17 @@
 eth_network_module = import_module(
-    "github.com/kurtosis-tech/eth-network-package/main.star"
+    "github.com/kurtosis-tech/eth-network-package/main.star@2.0.0"
 )
 prelaunch_data_generator_launcher = import_module(
-    "github.com/kurtosis-tech/eth-network-package/src/prelaunch_data_generator/prelaunch_data_generator_launcher/prelaunch_data_generator_launcher.star"
+    "github.com/kurtosis-tech/eth-network-package/src/prelaunch_data_generator/prelaunch_data_generator_launcher/prelaunch_data_generator_launcher.star@2.0.0"
 )
 shared_utils = import_module(
-    "github.com/kurtosis-tech/eth-network-package/shared_utils/shared_utils.star"
+    "github.com/kurtosis-tech/eth-network-package/shared_utils/shared_utils.star@2.0.0"
 )
 keystore_files_module = import_module(
-    "github.com/kurtosis-tech/eth-network-package/src/prelaunch_data_generator/cl_validator_keystores/keystore_files.star"
+    "github.com/kurtosis-tech/eth-network-package/src/prelaunch_data_generator/cl_validator_keystores/keystore_files.star@2.0.0"
 )
 keystores_result = import_module(
-    "github.com/kurtosis-tech/eth-network-package/src/prelaunch_data_generator/cl_validator_keystores/generate_keystores_result.star"
+    "github.com/kurtosis-tech/eth-network-package/src/prelaunch_data_generator/cl_validator_keystores/generate_keystores_result.star@2.0.0"
 )
 
 
