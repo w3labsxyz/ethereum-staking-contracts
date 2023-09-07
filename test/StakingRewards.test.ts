@@ -267,6 +267,48 @@ describe("StakingRewards", async () => {
       ).to.changeEtherBalance(this.justfarming, ethers.parseEther("0.002"));
     });
 
+    it("withdrawal of fees doesn't underflow if subsequent validator exit has been finished", async function () {
+      await setBalance(this.justfarming.address, 1);
+      await setBalance(this.customer.address, 1);
+
+      const validatorPublicKeys = [
+        `0x${"01".repeat(48)}`,
+        `0x${"02".repeat(48)}`,
+        `0x${"03".repeat(48)}`,
+      ];
+
+      // The staking rewards contract is initially empty
+      expect(
+        await ethers.provider.getBalance(this.stakingRewardsContract.target),
+      ).to.equal(0);
+      expect(await this.stakingRewardsContract.totalReleased()).to.equal(
+        ethers.parseEther("0"),
+      );
+
+      // Add the validator 0x01^48
+      await this.stakingRewardsContract
+        .connect(this.deployer)
+        .activateValidators(validatorPublicKeys);
+
+      // Simulate accumulation of rewards for the two validators
+      await updateBalance(this.stakingRewardsContract.target, 0.02);
+
+      // Releasable fees amount to 10% of the staking rewards
+      await expect(
+        this.stakingRewardsContract.connect(this.justfarming).release(),
+      ).to.changeEtherBalance(this.justfarming, ethers.parseEther("0.002"));
+
+      // Exit the validator 0x01^48
+      await this.stakingRewardsContract
+        .connect(this.customer)
+        .exitValidator(validatorPublicKeys[0]);
+
+      // Try to withdraw fees after exit but prior to validator sweep
+      await expect(
+        this.stakingRewardsContract.connect(this.justfarming).release(),
+      ).to.be.revertedWith("there are currently no funds to release");
+    });
+
     it("keeps track of validator exits to respect that fees do not apply to the submitted stake", async function () {
       await setBalance(this.justfarming.address, 1);
       await setBalance(this.customer.address, 1);
