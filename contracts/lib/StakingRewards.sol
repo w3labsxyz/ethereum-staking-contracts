@@ -186,7 +186,7 @@ contract StakingRewards is AccessControl, IStakingRewardsContract {
      */
     function exitValidator(
         bytes calldata pubkey
-    ) public virtual onlyRole(REWARDS_RECIPIENT_ROLE) {
+    ) external virtual onlyRole(REWARDS_RECIPIENT_ROLE) {
         require(
             pubkey.length == PUBKEY_LENGTH,
             "public key must be 48 bytes long"
@@ -205,7 +205,7 @@ contract StakingRewards is AccessControl, IStakingRewardsContract {
      * This function may only be called by the rewards recipient or fee recipient.
      * The recipient will receive the Ether they are owed since the last time they claimed.
      */
-    function release() public virtual {
+    function release() external virtual {
         require(
             hasRole(REWARDS_RECIPIENT_ROLE, msg.sender) ||
                 hasRole(FEE_RECIPIENT_ROLE, msg.sender),
