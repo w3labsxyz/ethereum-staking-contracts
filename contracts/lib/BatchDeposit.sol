@@ -26,7 +26,7 @@ contract BatchDeposit is Ownable, ReentrancyGuard {
 
     mapping(bytes => bool) private _isValidatorAvailable;
 
-    event DepositEvent(address from, uint256 nodesAmount);
+    event Deposited(address from, uint256 nodesAmount);
 
     constructor(address depositContractAddr) {
         require(
@@ -181,6 +181,6 @@ contract BatchDeposit is Ownable, ReentrancyGuard {
             pubkeys
         );
 
-        emit DepositEvent(msg.sender, numberOfValidators);
+        emit Deposited(msg.sender, numberOfValidators);
     }
 }
