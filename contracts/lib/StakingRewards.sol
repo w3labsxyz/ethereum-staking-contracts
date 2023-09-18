@@ -160,7 +160,7 @@ contract StakingRewards is AccessControl, IStakingRewardsContract {
     ) public virtual onlyRole(DEPOSITOR_ROLE) {
         require(pubkeys.length > 0, "no validators to activate");
 
-        for (uint256 i = 0; i < pubkeys.length; i++) {
+        for (uint256 i = 0; i < pubkeys.length; ++i) {
             require(
                 pubkeys[i].length == PUBKEY_LENGTH,
                 "public key must be 48 bytes long"
