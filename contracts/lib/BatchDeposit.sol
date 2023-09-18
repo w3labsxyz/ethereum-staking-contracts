@@ -73,17 +73,21 @@ contract BatchDeposit is Ownable, ReentrancyGuard {
             "the number of validators to register must be greater than 0"
         );
 
-        for (uint256 i = 0; i < numberOfValidators; ++i) {
-            require(
-                pubkeys[i].length == PUBKEY_LENGTH,
-                "public key must be 48 bytes long"
-            );
-            require(
-                !_isValidatorAvailable[pubkeys[i]],
-                "validator is already registered"
-            );
+        for (uint256 i = 0; i < numberOfValidators; ) {
+            unchecked {
+                require(
+                    pubkeys[i].length == PUBKEY_LENGTH,
+                    "public key must be 48 bytes long"
+                );
+                require(
+                    !_isValidatorAvailable[pubkeys[i]],
+                    "validator is already registered"
+                );
 
-            _isValidatorAvailable[pubkeys[i]] = true;
+                _isValidatorAvailable[pubkeys[i]] = true;
+
+                ++i;
+            }
         }
     }
 
@@ -143,28 +147,34 @@ contract BatchDeposit is Ownable, ReentrancyGuard {
             "the number of deposit data roots must match the number of public keys"
         );
 
-        for (uint256 i = 0; i < numberOfValidators; ++i) {
-            require(
-                pubkeys[i].length == PUBKEY_LENGTH,
-                "public key must be 48 bytes long"
-            );
-            require(
-                signatures[i].length == SIGNATURE_LENGTH,
-                "signature must be 96 bytes long"
-            );
-            require(
-                _isValidatorAvailable[pubkeys[i]],
-                "validator is not available"
-            );
+        for (uint256 i = 0; i < numberOfValidators; ) {
+            unchecked {
+                require(
+                    pubkeys[i].length == PUBKEY_LENGTH,
+                    "public key must be 48 bytes long"
+                );
+                require(
+                    signatures[i].length == SIGNATURE_LENGTH,
+                    "signature must be 96 bytes long"
+                );
+                require(
+                    _isValidatorAvailable[pubkeys[i]],
+                    "validator is not available"
+                );
 
-            _isValidatorAvailable[pubkeys[i]] = false;
+                _isValidatorAvailable[pubkeys[i]] = false;
 
-            IDepositContract(depositContract).deposit{value: DEPOSIT_AMOUNT}(
-                pubkeys[i],
-                withdrawalCredential,
-                signatures[i],
-                depositDataRoots[i]
-            );
+                IDepositContract(depositContract).deposit{
+                    value: DEPOSIT_AMOUNT
+                }(
+                    pubkeys[i],
+                    withdrawalCredential,
+                    signatures[i],
+                    depositDataRoots[i]
+                );
+
+                ++i;
+            }
         }
 
         IStakingRewardsContract(stakingRewardsContract).activateValidators(
