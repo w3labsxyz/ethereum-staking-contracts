@@ -9,7 +9,7 @@
     "lint:sol": "solhint 'contracts/**/*.sol' 'test/**/*.sol'",
     "lint:ts": "eslint tasks test",
     "analyze": "slither contracts/lib",
-    "fmt": "prettier --write contracts tasks test"
+    "fmt": "prettier --write --plugin=prettier-plugin-solidity contracts tasks test"
   },
   "repository": {
     "type": "git",
