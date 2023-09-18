@@ -168,6 +168,38 @@ describe("BatchDeposit", async () => {
       ).to.be.revertedWith("validator is already registered");
     });
 
+    it("reverts if a validator has already been registered *and* activated", async function () {
+      const [owner, payee1] = await ethers.getSigners();
+      const numberOfNodes = 1;
+
+      const validatorDeposits = createValidatorDeposits(
+        this.stakingRewardsContract.target,
+        numberOfNodes,
+      );
+
+      await this.batchDepositContract
+        .connect(owner)
+        .registerValidators(validatorDeposits.pubkeys);
+
+      await this.batchDepositContract
+        .connect(payee1)
+        .batchDeposit(
+          validatorDeposits.withdrawalAddress,
+          validatorDeposits.pubkeys,
+          validatorDeposits.signatures,
+          validatorDeposits.depositDataRoots,
+          {
+            value: validatorDeposits.amount,
+          },
+        );
+
+      await expect(
+        this.batchDepositContract
+          .connect(owner)
+          .registerValidators(validatorDeposits.pubkeys),
+      ).to.be.revertedWith("validator is or was active");
+    });
+
     it("reverts if a validator public key is invalid", async function () {
       const [owner] = await ethers.getSigners();
 

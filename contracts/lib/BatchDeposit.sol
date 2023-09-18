@@ -24,7 +24,12 @@ contract BatchDeposit is Ownable, ReentrancyGuard {
     uint256 private constant MAX_VALIDATORS_PER_BATCH = 100;
     uint256 private constant DEPOSIT_AMOUNT = 32 ether;
 
-    mapping(bytes => bool) private _isValidatorAvailable;
+    enum ValidatorState {
+        None,
+        Registered,
+        Activated
+    }
+    mapping(bytes => ValidatorState) private _validatorStates;
 
     event Deposited(address from, uint256 nodesAmount);
 
@@ -54,7 +59,7 @@ contract BatchDeposit is Ownable, ReentrancyGuard {
     function isValidatorAvailable(
         bytes calldata pubkey
     ) public view returns (bool) {
-        return _isValidatorAvailable[pubkey];
+        return _validatorStates[pubkey] == ValidatorState.Registered;
     }
 
     /**
@@ -80,11 +85,15 @@ contract BatchDeposit is Ownable, ReentrancyGuard {
                     "public key must be 48 bytes long"
                 );
                 require(
-                    !_isValidatorAvailable[pubkeys[i]],
+                    _validatorStates[pubkeys[i]] != ValidatorState.Registered,
                     "validator is already registered"
                 );
+                require(
+                    _validatorStates[pubkeys[i]] != ValidatorState.Activated,
+                    "validator is or was active"
+                );
 
-                _isValidatorAvailable[pubkeys[i]] = true;
+                _validatorStates[pubkeys[i]] = ValidatorState.Registered;
 
                 ++i;
             }
@@ -158,11 +167,11 @@ contract BatchDeposit is Ownable, ReentrancyGuard {
                     "signature must be 96 bytes long"
                 );
                 require(
-                    _isValidatorAvailable[pubkeys[i]],
+                    _validatorStates[pubkeys[i]] == ValidatorState.Registered,
                     "validator is not available"
                 );
 
-                _isValidatorAvailable[pubkeys[i]] = false;
+                _validatorStates[pubkeys[i]] = ValidatorState.Activated;
 
                 IDepositContract(depositContract).deposit{
                     value: DEPOSIT_AMOUNT
