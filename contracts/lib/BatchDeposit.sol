@@ -15,14 +15,14 @@ import "../interfaces/IDepositContract.sol";
  * contract owner.
  */
 contract BatchDeposit is Ownable, ReentrancyGuard {
-    address immutable depositContract;
+    address private immutable depositContract;
 
     error NotPayable();
 
-    uint256 constant PUBKEY_LENGTH = 48;
-    uint256 constant SIGNATURE_LENGTH = 96;
-    uint256 constant MAX_VALIDATORS_PER_BATCH = 100;
-    uint256 constant DEPOSIT_AMOUNT = 32 ether;
+    uint256 private constant PUBKEY_LENGTH = 48;
+    uint256 private constant SIGNATURE_LENGTH = 96;
+    uint256 private constant MAX_VALIDATORS_PER_BATCH = 100;
+    uint256 private constant DEPOSIT_AMOUNT = 32 ether;
 
     mapping(bytes => bool) private _isValidatorAvailable;
 
