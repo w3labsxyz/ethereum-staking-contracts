@@ -17,6 +17,8 @@ import "../interfaces/IDepositContract.sol";
 contract BatchDeposit is Ownable, ReentrancyGuard {
     address immutable depositContract;
 
+    error NotPayable();
+
     uint256 constant PUBKEY_LENGTH = 48;
     uint256 constant SIGNATURE_LENGTH = 96;
     uint256 constant MAX_VALIDATORS_PER_BATCH = 100;
@@ -39,7 +41,7 @@ contract BatchDeposit is Ownable, ReentrancyGuard {
      * @dev This contract will not accept direct ETH transactions.
      */
     receive() external payable {
-        revert("This contract does not accept ETH being sent to it");
+        revert NotPayable();
     }
 
     /**

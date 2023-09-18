@@ -121,6 +121,20 @@ describe("BatchDeposit", async () => {
     );
   });
 
+  describe("not payable", async () => {
+    it("throws a custom error `NotPayable` when trying to send ETH", async function () {
+      const [_deployer, _justfarmingFeeWallet, _customer, randomUser] =
+        await ethers.getSigners();
+
+      await expect(
+        randomUser.sendTransaction({
+          to: this.batchDepositContract.target,
+          value: ethers.parseEther("1.0"),
+        }),
+      ).to.be.revertedWithCustomError(this.batchDepositContract, "NotPayable");
+    });
+  });
+
   describe("validator registration", async () => {
     it("is allowed with valid validator public keys", async function () {
       const [owner, nobody] = await ethers.getSigners();
