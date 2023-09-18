@@ -158,9 +158,11 @@ contract StakingRewards is AccessControl, IStakingRewardsContract {
     function activateValidators(
         bytes[] calldata pubkeys
     ) public virtual onlyRole(DEPOSITOR_ROLE) {
-        require(pubkeys.length > 0, "no validators to activate");
+        uint256 numberOfPublicKeys = pubkeys.length;
 
-        for (uint256 i = 0; i < pubkeys.length; ) {
+        require(numberOfPublicKeys > 0, "no validators to activate");
+
+        for (uint256 i = 0; i < numberOfPublicKeys; ) {
             unchecked {
                 require(
                     pubkeys[i].length == PUBKEY_LENGTH,
@@ -177,7 +179,9 @@ contract StakingRewards is AccessControl, IStakingRewardsContract {
                 ++i;
             }
         }
-        _numberOfActiveValidators = _numberOfActiveValidators + pubkeys.length;
+        _numberOfActiveValidators =
+            _numberOfActiveValidators +
+            numberOfPublicKeys;
         emit DidUpdateNumberOfActiveValidators(_numberOfActiveValidators);
     }
 
