@@ -194,6 +194,26 @@ describe("StakingRewards", async () => {
       ).to.be.revertedWith(`validator is already active`);
     });
 
+    it("emits `ValidatorsActivated` upon activation of validators and `ValidatorExited` upon successful exit", async function () {
+      const validatorPublicKey = `0x${"01".repeat(48)}`;
+
+      let res = await this.stakingRewardsContract
+        .connect(this.deployer)
+        .activateValidators([validatorPublicKey]);
+
+      await expect(res)
+        .to.emit(this.stakingRewardsContract, "ValidatorsActivated")
+        .withArgs([validatorPublicKey]);
+
+      res = await this.stakingRewardsContract
+        .connect(this.customer)
+        .exitValidator(validatorPublicKey);
+
+      await expect(res)
+        .to.emit(this.stakingRewardsContract, "ValidatorExited")
+        .withArgs(validatorPublicKey);
+    });
+
     it("prevents exiting a validator that has not been added", async function () {
       const validatorPublicKey = `0x${"01".repeat(48)}`;
       await expect(

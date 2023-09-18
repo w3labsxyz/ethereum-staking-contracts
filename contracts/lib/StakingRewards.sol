@@ -5,8 +5,6 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
 interface IStakingRewardsContract {
-    event DidUpdateNumberOfActiveValidators(uint256 numberOfActiveValidators);
-
     function activateValidators(bytes[] calldata pubkeys) external;
 }
 
@@ -41,6 +39,8 @@ contract StakingRewards is AccessControl, IStakingRewardsContract {
     uint256 private constant MAX_BASIS_POINTS = 10000;
 
     event PaymentReleased(address to, uint256 amount);
+    event ValidatorExited(bytes exitedValidatorPublicKey);
+    event ValidatorsActivated(bytes[] validatorPublicKeys);
 
     address private immutable _depositContract;
     address payable private immutable _rewardsRecipient;
@@ -182,7 +182,7 @@ contract StakingRewards is AccessControl, IStakingRewardsContract {
         _numberOfActiveValidators =
             _numberOfActiveValidators +
             numberOfPublicKeys;
-        emit DidUpdateNumberOfActiveValidators(_numberOfActiveValidators);
+        emit ValidatorsActivated(pubkeys);
     }
 
     /**
@@ -204,7 +204,7 @@ contract StakingRewards is AccessControl, IStakingRewardsContract {
         _isActiveValidator[pubkey] = false;
         _numberOfActiveValidators = _numberOfActiveValidators - 1;
         _exitedStake = _exitedStake + STAKE_PER_VALIDATOR;
-        emit DidUpdateNumberOfActiveValidators(_numberOfActiveValidators);
+        emit ValidatorExited(pubkey);
     }
 
     /**

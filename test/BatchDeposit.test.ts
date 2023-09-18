@@ -220,7 +220,7 @@ describe("BatchDeposit", async () => {
         expectedPaymentAmount,
       );
       await expect(res)
-        .to.emit(this.batchDepositContract, "DepositEvent")
+        .to.emit(this.batchDepositContract, "Deposited")
         .withArgs(payee1.address, numberOfNodes);
     });
 
