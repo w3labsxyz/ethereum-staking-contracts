@@ -36,9 +36,9 @@ contract StakingRewards is AccessControl, IStakingRewardsContract {
     bytes32 public constant REWARDS_RECIPIENT_ROLE =
         keccak256("REWARDS_RECIPIENT_ROLE");
 
-    uint256 constant PUBKEY_LENGTH = 48;
-    uint256 constant STAKE_PER_VALIDATOR = 32 ether;
-    uint256 constant MAX_BASIS_POINTS = 10000;
+    uint256 private constant PUBKEY_LENGTH = 48;
+    uint256 private constant STAKE_PER_VALIDATOR = 32 ether;
+    uint256 private constant MAX_BASIS_POINTS = 10000;
 
     event PaymentReleased(address to, uint256 amount);
 
