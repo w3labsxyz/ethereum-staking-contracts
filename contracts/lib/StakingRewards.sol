@@ -177,7 +177,7 @@ contract StakingRewards is AccessControl, IStakingRewardsContract {
                 ++i;
             }
         }
-        _numberOfActiveValidators += pubkeys.length;
+        _numberOfActiveValidators = _numberOfActiveValidators + pubkeys.length;
         emit DidUpdateNumberOfActiveValidators(_numberOfActiveValidators);
     }
 
@@ -198,8 +198,8 @@ contract StakingRewards is AccessControl, IStakingRewardsContract {
         );
         require(_isActiveValidator[pubkey], "validator is not active");
         _isActiveValidator[pubkey] = false;
-        _numberOfActiveValidators -= 1;
-        _exitedStake += STAKE_PER_VALIDATOR;
+        _numberOfActiveValidators = _numberOfActiveValidators - 1;
+        _exitedStake = _exitedStake + STAKE_PER_VALIDATOR;
         emit DidUpdateNumberOfActiveValidators(_numberOfActiveValidators);
     }
 
@@ -224,9 +224,9 @@ contract StakingRewards is AccessControl, IStakingRewardsContract {
 
         require(releasableFunds > 0, "there are currently no funds to release");
 
-        _totalReleased += releasableFunds;
+        _totalReleased = _totalReleased + releasableFunds;
         unchecked {
-            _released[recipient] += releasableFunds;
+            _released[recipient] = _released[recipient] + releasableFunds;
         }
 
         emit PaymentReleased(recipient, releasableFunds);
