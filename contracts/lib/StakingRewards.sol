@@ -77,7 +77,7 @@ contract StakingRewards is AccessControl, IStakingRewardsContract {
         address payable feeRecipient,
         address payable rewardsRecipient,
         uint256 newFeeBasisPoints
-    ) payable {
+    ) {
         if (depositContract == address(0)) revert DepositContractZeroAddress();
         if (feeRecipient == address(0)) revert FeeRecipientZeroAddress();
         if (rewardsRecipient == address(0))
