@@ -18,6 +18,31 @@ Credits also go to [stakefish](https://www.stake.fish) and [abyss](https://www.a
 - [stakefish BatchDeposits contract (GitHub)](https://github.com/stakefish/eth2-batch-deposit/blob/main/contracts/BatchDeposits.sol)
 - [Abyss Eth2 Depositor contract (GitHub)](https://github.com/abyssfinance/abyss-eth2depositor/blob/main/contracts/AbyssEth2Depositor.sol)
 
+## Design Decisions
+
+### The Ethereum Validator Exit Process
+
+The `StakingRewards` contract, specifically the `releasable()` function, incorporates a vital design decision for calculating releasable ETH amounts. This decision is related to the Ethereum validator exit process and its absent interaction with smart contracts.
+
+#### Ethereum Validator Exit Process
+
+1. **Exit Message Broadcasting**: A signed exit message is broadcasted to the network when a validator exits. This message indicates the validator's intention to cease operations and initiate the process of exiting.
+2. **Non-Triggering of Smart Contracts**: Crucially, broadcasting a signed exit message in Ethereum does not trigger any smart contract execution. This is because the exit process occurs at the consensus layer of Ethereum, which operates independently of the execution layer where smart contracts reside.
+3. **Implications for Smart Contracts**: When a validator exits, this action can not automatically update relevant states or variables in smart contracts that might depend on the validator's status. This includes the `_exitedStake` variable in the `StakingRewards` contract, which is necessary for accurate reward calculations.
+
+#### Necessity of `exitValidators()` Function
+
+Given the described separation between the consensus and execution layers in Ethereum, the `StakingRewards` contract requires the `exitValidators()` function to be explicitly called by the reward recipient. This function updates the `_exitedStake` variable, aligning it with the actual state of exited validators.
+
+#### Economic Incentive and Responsibility
+
+1. **Active Engagement**: Reward recipients are incentivized to engage actively by calling `exitValidators()`, ensuring no fees apply to the stake returned after the successful exit of validators.
+2. **Autonomy and Accountability**: This design empowers reward recipients with freedom over their rewards while holding them accountable for maintaining the accuracy of their staking rewards.
+
+#### Design Justification and Conclusion
+
+This design decision is a pragmatic response to the inherent limitations and architectural design of the Ethereum network. It effectively addresses the disconnect between validator exit processes and smart contract execution, ensuring that the `StakingRewards` contract functions accurately and efficiently within these constraints. Simultaneously, it underscores the importance of stakeholder engagement and responsibility to ensure a consistent state and the correct allocation of rewards and fees.
+
 ## Setup
 
 The Justfaring contracts project uses the [Truffle Suite](https://trufflesuite.com/) and [Node.js with `npm`](https://nodejs.org/en) to manage its dependencies.
