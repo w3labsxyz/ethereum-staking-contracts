@@ -47,13 +47,18 @@ describe("StakingRewards", async () => {
       const [depositor, feeRecipient, rewardsRecipient] =
         await ethers.getSigners();
 
-      await expect(
-        ethers.deployContract(
+      try {
+        await ethers.deployContract(
           "StakingRewards",
           [depositor, feeRecipient, rewardsRecipient, 10001],
           { value: 0 },
-        ),
-      ).to.be.revertedWith("fees must be between 0% and 100%");
+        );
+        expect.fail("Contract deployed successfully, but was expected to fail");
+      } catch (error: unknown) {
+        expect(error.message).to.eq(
+          "VM Exception while processing transaction: reverted with custom error 'InvalidFeeBasisPoints(10001)'",
+        );
+      }
     });
 
     it("rejects fees between 0% and 100%", async () => {
@@ -104,32 +109,47 @@ describe("StakingRewards", async () => {
     it("forbids fee withdrawal if there is none", async function () {
       await expect(
         this.stakingRewardsContract.connect(this.justfarming).release(),
-      ).to.be.revertedWith("there are currently no funds to release");
+      ).to.be.revertedWithCustomError(
+        this.stakingRewardsContract,
+        "NoFundsToRelease",
+      );
     });
 
     describe("access control", async () => {
       it("forbids deployer to withdraw fees", async function () {
         await expect(
           this.stakingRewardsContract.connect(this.deployer).release(),
-        ).to.be.revertedWith(`sender is not permitted to release funds`);
+        ).to.be.revertedWithCustomError(
+          this.stakingRewardsContract,
+          "SenderNotPermittedToReleaseFunds",
+        );
       });
 
       it("forbids random addresses to withdraw fees", async function () {
         await expect(
           this.stakingRewardsContract.connect(this.nobody).release(),
-        ).to.be.revertedWith(`sender is not permitted to release funds`);
+        ).to.be.revertedWithCustomError(
+          this.stakingRewardsContract,
+          "SenderNotPermittedToReleaseFunds",
+        );
       });
 
       it("forbids deployer to withdraw rewards", async function () {
         await expect(
           this.stakingRewardsContract.connect(this.deployer).release(),
-        ).to.be.revertedWith(`sender is not permitted to release funds`);
+        ).to.be.revertedWithCustomError(
+          this.stakingRewardsContract,
+          "SenderNotPermittedToReleaseFunds",
+        );
       });
 
       it("forbids random addresses to withdraw rewards", async function () {
         await expect(
           this.stakingRewardsContract.connect(this.nobody).release(),
-        ).to.be.revertedWith(`sender is not permitted to release funds`);
+        ).to.be.revertedWithCustomError(
+          this.stakingRewardsContract,
+          "SenderNotPermittedToReleaseFunds",
+        );
       });
 
       it("forbids fee recipient to add validators", async function () {
@@ -178,7 +198,10 @@ describe("StakingRewards", async () => {
         this.stakingRewardsContract
           .connect(this.deployer)
           .activateValidators([invalidPublicKey]),
-      ).to.be.revertedWith(`public key must be 48 bytes long`);
+      ).to.be.revertedWithCustomError(
+        this.stakingRewardsContract,
+        "PublicKeyLengthMismatch",
+      );
     });
 
     it("can not add the same validator twice", async function () {
@@ -191,7 +214,10 @@ describe("StakingRewards", async () => {
         this.stakingRewardsContract
           .connect(this.deployer)
           .activateValidators([validatorPublicKey]),
-      ).to.be.revertedWith(`validator is already active`);
+      ).to.be.revertedWithCustomError(
+        this.stakingRewardsContract,
+        "ValidatorAlreadyActive",
+      );
     });
 
     it("emits `ValidatorsActivated` upon activation of validators and `ValidatorExited` upon successful exit", async function () {
@@ -220,7 +246,10 @@ describe("StakingRewards", async () => {
         this.stakingRewardsContract
           .connect(this.customer)
           .exitValidator(validatorPublicKey),
-      ).to.be.revertedWith(`validator is not active`);
+      ).to.be.revertedWithCustomError(
+        this.stakingRewardsContract,
+        "ValidatorNotActive",
+      );
     });
 
     it("prevents exiting a validator that has already exited", async function () {
@@ -235,7 +264,10 @@ describe("StakingRewards", async () => {
         this.stakingRewardsContract
           .connect(this.customer)
           .exitValidator(validatorPublicKey),
-      ).to.be.revertedWith(`validator is not active`);
+      ).to.be.revertedWithCustomError(
+        this.stakingRewardsContract,
+        "ValidatorNotActive",
+      );
     });
 
     it("prevents adding an empty set of validators", async function () {
@@ -243,7 +275,10 @@ describe("StakingRewards", async () => {
         this.stakingRewardsContract
           .connect(this.deployer)
           .activateValidators([]),
-      ).to.be.revertedWith(`no validators to activate`);
+      ).to.be.revertedWithCustomError(
+        this.stakingRewardsContract,
+        "NoValidatorsToActivate",
+      );
     });
 
     it("prevents (valid!) withdrawal of fees until validator exit has been finished", async function () {
@@ -276,7 +311,10 @@ describe("StakingRewards", async () => {
       // Try to withdraw fees after exit but prior to validator sweep
       await expect(
         this.stakingRewardsContract.connect(this.justfarming).release(),
-      ).to.be.revertedWith("there are currently no funds to release");
+      ).to.be.revertedWithCustomError(
+        this.stakingRewardsContract,
+        "NoFundsToRelease",
+      );
 
       // Simulate validator sweep returning the initially staked 32 ETH plus residual rewards
       await updateBalance(this.stakingRewardsContract.target, 32.01);
@@ -326,7 +364,10 @@ describe("StakingRewards", async () => {
       // Try to withdraw fees after exit but prior to validator sweep
       await expect(
         this.stakingRewardsContract.connect(this.justfarming).release(),
-      ).to.be.revertedWith("there are currently no funds to release");
+      ).to.be.revertedWithCustomError(
+        this.stakingRewardsContract,
+        "NoFundsToRelease",
+      );
     });
 
     it("keeps track of validator exits to respect that fees do not apply to the submitted stake", async function () {

@@ -54,6 +54,17 @@ contract StakingRewards is AccessControl, IStakingRewardsContract {
     uint256 private _exitedStake;
     uint256 private immutable _feeBasisPoints;
 
+    error DepositContractZeroAddress();
+    error FeeRecipientZeroAddress();
+    error RewardsRecipientZeroAddress();
+    error InvalidFeeBasisPoints(uint256 newFeeBasisPoints);
+    error NoValidatorsToActivate();
+    error PublicKeyLengthMismatch();
+    error ValidatorAlreadyActive();
+    error ValidatorNotActive();
+    error SenderNotPermittedToReleaseFunds();
+    error NoFundsToRelease();
+
     /**
      * @dev Creates an instance of `StakingRewards` where each account in `payees` is assigned the number of shares at
      * the matching position in the `shares` array.
@@ -67,22 +78,12 @@ contract StakingRewards is AccessControl, IStakingRewardsContract {
         address payable rewardsRecipient,
         uint256 newFeeBasisPoints
     ) payable {
-        require(
-            depositContract != address(0),
-            "deposit contract is the zero address"
-        );
-        require(
-            feeRecipient != address(0),
-            "fee recipient is the zero address"
-        );
-        require(
-            rewardsRecipient != address(0),
-            "rewards recipient is the zero address"
-        );
-        require(
-            newFeeBasisPoints >= 0 && newFeeBasisPoints <= MAX_BASIS_POINTS,
-            "fees must be between 0% and 100%"
-        );
+        if (depositContract == address(0)) revert DepositContractZeroAddress();
+        if (feeRecipient == address(0)) revert FeeRecipientZeroAddress();
+        if (rewardsRecipient == address(0))
+            revert RewardsRecipientZeroAddress();
+        if (newFeeBasisPoints > MAX_BASIS_POINTS)
+            revert InvalidFeeBasisPoints(newFeeBasisPoints);
 
         _depositContract = depositContract;
         _feeRecipient = feeRecipient;
@@ -160,19 +161,14 @@ contract StakingRewards is AccessControl, IStakingRewardsContract {
     ) external virtual onlyRole(DEPOSITOR_ROLE) {
         uint256 numberOfPublicKeys = pubkeys.length;
 
-        require(numberOfPublicKeys > 0, "no validators to activate");
+        if (numberOfPublicKeys == 0) revert NoValidatorsToActivate();
 
         for (uint256 i = 0; i < numberOfPublicKeys; ) {
             unchecked {
-                require(
-                    pubkeys[i].length == PUBKEY_LENGTH,
-                    "public key must be 48 bytes long"
-                );
-                // require validator not active already
-                require(
-                    !_isActiveValidator[pubkeys[i]],
-                    "validator is already active"
-                );
+                if (pubkeys[i].length != PUBKEY_LENGTH)
+                    revert PublicKeyLengthMismatch();
+                if (_isActiveValidator[pubkeys[i]])
+                    revert ValidatorAlreadyActive();
 
                 _isActiveValidator[pubkeys[i]] = true;
 
@@ -196,11 +192,8 @@ contract StakingRewards is AccessControl, IStakingRewardsContract {
     function exitValidator(
         bytes calldata pubkey
     ) external virtual onlyRole(REWARDS_RECIPIENT_ROLE) {
-        require(
-            pubkey.length == PUBKEY_LENGTH,
-            "public key must be 48 bytes long"
-        );
-        require(_isActiveValidator[pubkey], "validator is not active");
+        if (pubkey.length != PUBKEY_LENGTH) revert PublicKeyLengthMismatch();
+        if (!_isActiveValidator[pubkey]) revert ValidatorNotActive();
         _isActiveValidator[pubkey] = false;
         _numberOfActiveValidators = _numberOfActiveValidators - 1;
         _exitedStake = _exitedStake + STAKE_PER_VALIDATOR;
@@ -215,18 +208,17 @@ contract StakingRewards is AccessControl, IStakingRewardsContract {
      * The recipient will receive the Ether they are owed since the last time they claimed.
      */
     function release() external virtual {
-        require(
-            hasRole(REWARDS_RECIPIENT_ROLE, msg.sender) ||
-                hasRole(FEE_RECIPIENT_ROLE, msg.sender),
-            "sender is not permitted to release funds"
-        );
+        if (
+            !hasRole(REWARDS_RECIPIENT_ROLE, msg.sender) &&
+            !hasRole(FEE_RECIPIENT_ROLE, msg.sender)
+        ) revert SenderNotPermittedToReleaseFunds();
 
         // We know that the rewards recipient and fee recipients are payable,
         // hence can confidently cast the msg.sender to be payable
         address payable recipient = payable(msg.sender);
         uint256 releasableFunds = releasable(recipient);
 
-        require(releasableFunds > 0, "there are currently no funds to release");
+        if (releasableFunds == 0) revert NoFundsToRelease();
 
         _totalReleased = _totalReleased + releasableFunds;
         unchecked {

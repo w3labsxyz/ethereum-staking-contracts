@@ -165,7 +165,10 @@ describe("BatchDeposit", async () => {
         this.batchDepositContract
           .connect(owner)
           .registerValidators([validator1Pubkey]),
-      ).to.be.revertedWith("validator is already registered");
+      ).to.be.revertedWithCustomError(
+        this.batchDepositContract,
+        "ValidatorAlreadyRegistered",
+      );
     });
 
     it("reverts if a validator has already been registered *and* activated", async function () {
@@ -197,7 +200,10 @@ describe("BatchDeposit", async () => {
         this.batchDepositContract
           .connect(owner)
           .registerValidators(validatorDeposits.pubkeys),
-      ).to.be.revertedWith("validator is or was active");
+      ).to.be.revertedWithCustomError(
+        this.batchDepositContract,
+        "ValidatorIsOrWasActive",
+      );
     });
 
     it("reverts if a validator public key is invalid", async function () {
@@ -209,7 +215,10 @@ describe("BatchDeposit", async () => {
         this.batchDepositContract
           .connect(owner)
           .registerValidators([validator1Pubkey]),
-      ).to.be.revertedWith("public key must be 48 bytes long");
+      ).to.be.revertedWithCustomError(
+        this.batchDepositContract,
+        "PublicKeyLengthMismatch",
+      );
     });
   });
 
@@ -280,8 +289,9 @@ describe("BatchDeposit", async () => {
               value: amountWei,
             },
           ),
-      ).to.be.revertedWith(
-        "the transaction amount must be equal to the number of validators to deploy multiplied by 32 ETH",
+      ).to.be.revertedWithCustomError(
+        this.batchDepositContract,
+        "InvalidTransactionAmount",
       );
     });
 
@@ -309,8 +319,9 @@ describe("BatchDeposit", async () => {
               value: amountWei,
             },
           ),
-      ).to.be.revertedWith(
-        "the transaction amount must be equal to the number of validators to deploy multiplied by 32 ETH",
+      ).to.be.revertedWithCustomError(
+        this.batchDepositContract,
+        "InvalidTransactionAmount",
       );
     });
 
@@ -338,8 +349,9 @@ describe("BatchDeposit", async () => {
               value: validatorDeposits.amount,
             },
           ),
-      ).to.be.revertedWith(
-        "the number of signatures must match the number of public keys",
+      ).to.be.revertedWithCustomError(
+        this.batchDepositContract,
+        "SignaturesLengthMismatch",
       );
     });
 
@@ -367,8 +379,9 @@ describe("BatchDeposit", async () => {
               value: validatorDeposits.amount,
             },
           ),
-      ).to.be.revertedWith(
-        "the number of deposit data roots must match the number of public keys",
+      ).to.be.revertedWithCustomError(
+        this.batchDepositContract,
+        "DepositDataRootsLengthMismatch",
       );
     });
 
@@ -396,7 +409,10 @@ describe("BatchDeposit", async () => {
               value: validatorDeposits.amount,
             },
           ),
-      ).to.be.revertedWith("public key must be 48 bytes long");
+      ).to.be.revertedWithCustomError(
+        this.batchDepositContract,
+        "PublicKeyLengthMismatch",
+      );
     });
 
     it("reverts if a signature is invalid", async function () {
@@ -423,7 +439,10 @@ describe("BatchDeposit", async () => {
               value: validatorDeposits.amount,
             },
           ),
-      ).to.be.revertedWith("signature must be 96 bytes long");
+      ).to.be.revertedWithCustomError(
+        this.batchDepositContract,
+        "SignatureLengthMismatch",
+      );
     });
 
     it("reverts if a validator is not available", async function () {
@@ -446,7 +465,10 @@ describe("BatchDeposit", async () => {
               value: validatorDeposits.amount,
             },
           ),
-      ).to.be.revertedWith("validator is not available");
+      ).to.be.revertedWithCustomError(
+        this.batchDepositContract,
+        "ValidatorNotAvailable",
+      );
     });
 
     it("updates the available validators after a successful deposit", async function () {
