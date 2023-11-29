@@ -58,7 +58,7 @@ contract BatchDeposit is Ownable, ReentrancyGuard {
      */
     function isValidatorAvailable(
         bytes calldata pubkey
-    ) public view returns (bool) {
+    ) external view returns (bool) {
         return _validatorStates[pubkey] == ValidatorState.Registered;
     }
 

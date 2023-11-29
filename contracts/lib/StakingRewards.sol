@@ -97,21 +97,21 @@ contract StakingRewards is AccessControl, IStakingRewardsContract {
     /**
      * @dev Getter for the number of active validators.
      */
-    function numberOfActiveValidators() public view returns (uint256) {
+    function numberOfActiveValidators() external view returns (uint256) {
         return _numberOfActiveValidators;
     }
 
     /**
      * @dev Getter for the feeBasisPoints.
      */
-    function feeBasisPoints() public view returns (uint256) {
+    function feeBasisPoints() external view returns (uint256) {
         return _feeBasisPoints;
     }
 
     /**
      * @dev Getter for the total amount of Ether already released.
      */
-    function totalReleased() public view returns (uint256) {
+    function totalReleased() external view returns (uint256) {
         return _totalReleased;
     }
 
@@ -157,7 +157,7 @@ contract StakingRewards is AccessControl, IStakingRewardsContract {
      */
     function activateValidators(
         bytes[] calldata pubkeys
-    ) public virtual onlyRole(DEPOSITOR_ROLE) {
+    ) external virtual onlyRole(DEPOSITOR_ROLE) {
         uint256 numberOfPublicKeys = pubkeys.length;
 
         require(numberOfPublicKeys > 0, "no validators to activate");
