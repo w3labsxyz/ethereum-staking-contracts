@@ -17,8 +17,6 @@ import "../interfaces/IDepositContract.sol";
 contract BatchDeposit is Ownable, ReentrancyGuard {
     address private immutable depositContract;
 
-    error NotPayable();
-
     uint256 private constant PUBKEY_LENGTH = 48;
     uint256 private constant SIGNATURE_LENGTH = 96;
     uint256 private constant MAX_VALIDATORS_PER_BATCH = 100;
@@ -33,11 +31,22 @@ contract BatchDeposit is Ownable, ReentrancyGuard {
 
     event Deposited(address from, uint256 nodesAmount);
 
+    error NotPayable();
+    error InvalidDepositContractAddress();
+    error NoValidatorsToRegister();
+    error PublicKeyLengthMismatch();
+    error ValidatorAlreadyRegistered();
+    error ValidatorIsOrWasActive();
+    error InvalidNumberOfValidators();
+    error InvalidTransactionAmount();
+    error SignaturesLengthMismatch();
+    error DepositDataRootsLengthMismatch();
+    error SignatureLengthMismatch();
+    error ValidatorNotAvailable();
+
     constructor(address depositContractAddr) {
-        require(
-            depositContractAddr != address(0),
-            "Invalid deposit contract address"
-        );
+        if (depositContractAddr == address(0))
+            revert InvalidDepositContractAddress();
 
         depositContract = depositContractAddr;
     }
@@ -73,25 +82,16 @@ contract BatchDeposit is Ownable, ReentrancyGuard {
     function registerValidators(bytes[] calldata pubkeys) external onlyOwner {
         uint256 numberOfValidators = pubkeys.length;
 
-        require(
-            numberOfValidators > 0,
-            "the number of validators to register must be greater than 0"
-        );
+        if (numberOfValidators == 0) revert NoValidatorsToRegister();
 
         for (uint256 i = 0; i < numberOfValidators; ) {
             unchecked {
-                require(
-                    pubkeys[i].length == PUBKEY_LENGTH,
-                    "public key must be 48 bytes long"
-                );
-                require(
-                    _validatorStates[pubkeys[i]] != ValidatorState.Registered,
-                    "validator is already registered"
-                );
-                require(
-                    _validatorStates[pubkeys[i]] != ValidatorState.Activated,
-                    "validator is or was active"
-                );
+                if (pubkeys[i].length != PUBKEY_LENGTH)
+                    revert PublicKeyLengthMismatch();
+                if (_validatorStates[pubkeys[i]] == ValidatorState.Registered)
+                    revert ValidatorAlreadyRegistered();
+                if (_validatorStates[pubkeys[i]] == ValidatorState.Activated)
+                    revert ValidatorIsOrWasActive();
 
                 _validatorStates[pubkeys[i]] = ValidatorState.Registered;
 
@@ -138,38 +138,25 @@ contract BatchDeposit is Ownable, ReentrancyGuard {
             bytes20(stakingRewardsContract)
         );
 
-        require(
-            numberOfValidators > 0 &&
-                numberOfValidators <= MAX_VALIDATORS_PER_BATCH,
-            "the number of validators must be greater than 0 and less than or equal to 100"
-        );
-        require(
-            msg.value == DEPOSIT_AMOUNT * numberOfValidators,
-            "the transaction amount must be equal to the number of validators to deploy multiplied by 32 ETH"
-        );
-        require(
-            signatures.length == pubkeys.length,
-            "the number of signatures must match the number of public keys"
-        );
-        require(
-            depositDataRoots.length == pubkeys.length,
-            "the number of deposit data roots must match the number of public keys"
-        );
+        if (
+            numberOfValidators == 0 ||
+            numberOfValidators > MAX_VALIDATORS_PER_BATCH
+        ) revert InvalidNumberOfValidators();
+        if (msg.value != DEPOSIT_AMOUNT * numberOfValidators)
+            revert InvalidTransactionAmount();
+        if (signatures.length != pubkeys.length)
+            revert SignaturesLengthMismatch();
+        if (depositDataRoots.length != pubkeys.length)
+            revert DepositDataRootsLengthMismatch();
 
         for (uint256 i = 0; i < numberOfValidators; ) {
             unchecked {
-                require(
-                    pubkeys[i].length == PUBKEY_LENGTH,
-                    "public key must be 48 bytes long"
-                );
-                require(
-                    signatures[i].length == SIGNATURE_LENGTH,
-                    "signature must be 96 bytes long"
-                );
-                require(
-                    _validatorStates[pubkeys[i]] == ValidatorState.Registered,
-                    "validator is not available"
-                );
+                if (pubkeys[i].length != PUBKEY_LENGTH)
+                    revert PublicKeyLengthMismatch();
+                if (signatures[i].length != SIGNATURE_LENGTH)
+                    revert SignatureLengthMismatch();
+                if (_validatorStates[pubkeys[i]] != ValidatorState.Registered)
+                    revert ValidatorNotAvailable();
 
                 _validatorStates[pubkeys[i]] = ValidatorState.Activated;
 
