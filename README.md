@@ -107,6 +107,15 @@ To run the tests, you can run:
 npm run test
 ```
 
+#### Generate test-coverage
+
+
+To generate test coverage information, you can run:
+
+``` shell
+npm run test:coverage
+```
+
 #### Manual testing
 
 Manual tests can be conducted using [`ethdo`](https://github.com/wealdtech/ethdo), which can be installed using `go`:
