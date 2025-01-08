@@ -72,8 +72,8 @@ We use `solc-select` for managing the active solidity version.
 
 ```shell
 pip3 install solc-select
-solc-select install 0.8.21
-solc-select use 0.8.21
+solc-select install 0.8.28
+solc-select use 0.8.28
 ```
 
 ## Developing
@@ -83,7 +83,7 @@ solc-select use 0.8.21
 To compile the contracts for use in web applications using [`wagmi`](https://wagmi.sh), you can run:
 
 ```shell
-npx hardhat compile
+npm run compile
 npx hardhat generate-typescript-abi
 ```
 
@@ -328,7 +328,7 @@ ethdo wallet delete --wallet="${ETHDO_CONFIG_WALLET}"
 Compile the contracts with:
 
 ```shell
-npx hardhat compile
+npm run compile
 ```
 
 And continue by following the network-specific instructions below to deploy the contracts to a network.
