@@ -15,7 +15,7 @@ keystores_result = import_module(
 )
 
 
-KEYSTORES_OUTPUT_DIRPATH = "/justfarming-keystore"
+KEYSTORES_OUTPUT_DIRPATH = "/w3labs-keystore"
 KEYSTORES_GENERATION_TOOL_NAME = "eth2-val-tools"
 
 SUCCESSFUL_EXEC_CMD_EXIT_CODE = 0
@@ -28,7 +28,7 @@ TEKU_KEYS_DIRNAME = "teku-keys"
 TEKU_SECRETS_DIRNAME = "teku-secrets"
 
 
-def generate_justfarming_keystore(plan, mnemonic, num_validators, capella_fork_epoch):
+def generate_w3labs_keystore(plan, mnemonic, num_validators, capella_fork_epoch):
     service_name = prelaunch_data_generator_launcher.launch_prelaunch_data_generator(
         plan,
         {},
@@ -54,7 +54,7 @@ def generate_justfarming_keystore(plan, mnemonic, num_validators, capella_fork_e
 
     # Store outputs into files artifacts
     artifact_name = plan.store_service_files(
-        service_name, KEYSTORES_OUTPUT_DIRPATH, name="justfarming-keystore"
+        service_name, KEYSTORES_OUTPUT_DIRPATH, name="w3labs-keystore"
     )
 
     # This is necessary because the way Kurtosis currently implements artifact-storing is
@@ -74,11 +74,11 @@ def generate_justfarming_keystore(plan, mnemonic, num_validators, capella_fork_e
 
 
 def deploy_lighthouse(plan, validator_params):
-    generate_justfarming_keystore(
+    generate_w3labs_keystore(
         plan, validator_params["mnemonic"], validator_params["num_validators"], validator_params["capella_fork_epoch"]
     )
     plan.add_service(
-        name="justfarming-lighthouse-validator",
+        name="w3labs-lighthouse-validator",
         config=ServiceConfig(
             image="sigp/lighthouse:v4.4.1",
             ports={
@@ -94,15 +94,15 @@ def deploy_lighthouse(plan, validator_params):
             },
             files={
                 "/genesis": "cl-genesis-data",
-                "/validator-keys": "justfarming-keystore",
+                "/validator-keys": "w3labs-keystore",
             },
             cmd=[
                 "lighthouse",
                 "validator_client",
                 "--debug-level=info",
                 "--testnet-dir=/genesis/output",
-                "--validators-dir=/validator-keys/justfarming-keystore/keys",
-                "--secrets-dir=/validator-keys/justfarming-keystore/secrets",
+                "--validators-dir=/validator-keys/w3labs-keystore/keys",
+                "--secrets-dir=/validator-keys/w3labs-keystore/secrets",
                 "--init-slashing-protection",
                 "--http",
                 "--unencrypted-http-transport",

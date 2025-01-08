@@ -22,7 +22,7 @@ async function getRPCPort(
   servicePort: string,
 ): Promise<number> {
   const command =
-    "kurtosis enclave inspect justfarming-contracts" +
+    "kurtosis enclave inspect w3labs-contracts" +
     ` | grep -A4 ${serviceName}` +
     ` | grep '${servicePort}/'` +
     " | sed -n -e 's/^.*127\\.0\\.0\\.1:\\([0-9]*\\).*$/\\1/p'" +

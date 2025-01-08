@@ -77,12 +77,12 @@ describe("StakingRewards", async () => {
 
   describe("after deployment", async () => {
     beforeEach(async function () {
-      const [deployer, justfarming, customer, nobody, ethereumStakingContract] =
+      const [deployer, w3labs, customer, nobody, ethereumStakingContract] =
         await ethers.getSigners();
 
       this.customer = customer;
       this.deployer = deployer;
-      this.justfarming = justfarming;
+      this.w3labs = w3labs;
       this.nobody = nobody;
       this.ethereumStakingContract = ethereumStakingContract;
 
@@ -96,7 +96,7 @@ describe("StakingRewards", async () => {
 
       this.stakingRewardsContract = await ethers.deployContract(
         "StakingRewards",
-        [deployer.address, justfarming.address, customer.address, 1000],
+        [deployer.address, w3labs.address, customer.address, 1000],
       );
 
       await this.stakingRewardsContract.waitForDeployment();
@@ -108,7 +108,7 @@ describe("StakingRewards", async () => {
 
     it("forbids fee withdrawal if there is none", async function () {
       await expect(
-        this.stakingRewardsContract.connect(this.justfarming).release(),
+        this.stakingRewardsContract.connect(this.w3labs).release(),
       ).to.be.revertedWithCustomError(
         this.stakingRewardsContract,
         "NoFundsToRelease",
@@ -158,10 +158,10 @@ describe("StakingRewards", async () => {
 
         await expect(
           this.stakingRewardsContract
-            .connect(this.justfarming)
+            .connect(this.w3labs)
             .activateValidators([]),
         ).to.be.revertedWith(
-          `AccessControl: account ${this.justfarming.address.toLowerCase()} is missing role ${DEPOSITOR_ROLE}`,
+          `AccessControl: account ${this.w3labs.address.toLowerCase()} is missing role ${DEPOSITOR_ROLE}`,
         );
       });
 
@@ -282,7 +282,7 @@ describe("StakingRewards", async () => {
     });
 
     it("prevents (valid!) withdrawal of fees until validator exit has been finished", async function () {
-      await setBalance(this.justfarming.address, 1);
+      await setBalance(this.w3labs.address, 1);
       await setBalance(this.customer.address, 1);
 
       const validatorPublicKeys = [`0x${"01".repeat(48)}`];
@@ -310,7 +310,7 @@ describe("StakingRewards", async () => {
 
       // Try to withdraw fees after exit but prior to validator sweep
       await expect(
-        this.stakingRewardsContract.connect(this.justfarming).release(),
+        this.stakingRewardsContract.connect(this.w3labs).release(),
       ).to.be.revertedWithCustomError(
         this.stakingRewardsContract,
         "NoFundsToRelease",
@@ -321,12 +321,12 @@ describe("StakingRewards", async () => {
 
       // Releasable fees amount to 10% of the staking rewards (which don't include the 32 ETH initial stake)
       await expect(
-        this.stakingRewardsContract.connect(this.justfarming).release(),
-      ).to.changeEtherBalance(this.justfarming, ethers.parseEther("0.002"));
+        this.stakingRewardsContract.connect(this.w3labs).release(),
+      ).to.changeEtherBalance(this.w3labs, ethers.parseEther("0.002"));
     });
 
     it("withdrawal of fees doesn't underflow if subsequent validator exit has been finished", async function () {
-      await setBalance(this.justfarming.address, 1);
+      await setBalance(this.w3labs.address, 1);
       await setBalance(this.customer.address, 1);
 
       const validatorPublicKeys = [
@@ -353,8 +353,8 @@ describe("StakingRewards", async () => {
 
       // Releasable fees amount to 10% of the staking rewards
       await expect(
-        this.stakingRewardsContract.connect(this.justfarming).release(),
-      ).to.changeEtherBalance(this.justfarming, ethers.parseEther("0.002"));
+        this.stakingRewardsContract.connect(this.w3labs).release(),
+      ).to.changeEtherBalance(this.w3labs, ethers.parseEther("0.002"));
 
       // Exit the validator 0x01^48
       await this.stakingRewardsContract
@@ -363,7 +363,7 @@ describe("StakingRewards", async () => {
 
       // Try to withdraw fees after exit but prior to validator sweep
       await expect(
-        this.stakingRewardsContract.connect(this.justfarming).release(),
+        this.stakingRewardsContract.connect(this.w3labs).release(),
       ).to.be.revertedWithCustomError(
         this.stakingRewardsContract,
         "NoFundsToRelease",
@@ -371,7 +371,7 @@ describe("StakingRewards", async () => {
     });
 
     it("keeps track of validator exits to respect that fees do not apply to the submitted stake", async function () {
-      await setBalance(this.justfarming.address, 1);
+      await setBalance(this.w3labs.address, 1);
       await setBalance(this.customer.address, 1);
 
       const validatorPublicKeys = [
@@ -418,8 +418,8 @@ describe("StakingRewards", async () => {
 
       // Releasable fees amount to 10% of the staking rewards (which don't include the 32 ETH initial stake)
       await expect(
-        this.stakingRewardsContract.connect(this.justfarming).release(),
-      ).to.changeEtherBalance(this.justfarming, ethers.parseEther("0.005"));
+        this.stakingRewardsContract.connect(this.w3labs).release(),
+      ).to.changeEtherBalance(this.w3labs, ethers.parseEther("0.005"));
 
       // Releasable rewards amount to 90% of the staking rewrads plus 32 ETH initial stake
       await expect(
@@ -428,7 +428,7 @@ describe("StakingRewards", async () => {
     });
 
     it("keeps track of subsequently released stakes", async function () {
-      await setBalance(this.justfarming.address, 1);
+      await setBalance(this.w3labs.address, 1);
       await setBalance(this.customer.address, 1);
 
       const validatorPublicKeys = [
@@ -488,8 +488,8 @@ describe("StakingRewards", async () => {
 
       // Releasable fees amount to 10% of the staking rewards (which don't include the 32 ETH initial stake)
       await expect(
-        this.stakingRewardsContract.connect(this.justfarming).release(),
-      ).to.changeEtherBalance(this.justfarming, ethers.parseEther("0.005"));
+        this.stakingRewardsContract.connect(this.w3labs).release(),
+      ).to.changeEtherBalance(this.w3labs, ethers.parseEther("0.005"));
 
       // Releasable rewards amount to 90% of the staking rewrads plus 32 ETH initial stake
       await expect(
@@ -518,8 +518,8 @@ describe("StakingRewards", async () => {
 
       // Releasable fees amount to 10% of the staking rewards (which don't include the 64 ETH released stake)
       await expect(
-        this.stakingRewardsContract.connect(this.justfarming).release(),
-      ).to.changeEtherBalance(this.justfarming, ethers.parseEther("0.005"));
+        this.stakingRewardsContract.connect(this.w3labs).release(),
+      ).to.changeEtherBalance(this.w3labs, ethers.parseEther("0.005"));
 
       // Releasable rewards amount to 90% of the staking rewrads plus 32 ETH initial stake
       await expect(
@@ -528,7 +528,7 @@ describe("StakingRewards", async () => {
     });
 
     it("allows to withdraw accumulated fees and rewards", async function () {
-      await setBalance(this.justfarming.address, 1);
+      await setBalance(this.w3labs.address, 1);
       await setBalance(this.customer.address, 1);
 
       // The staking rewards contract is initially empty
@@ -544,8 +544,8 @@ describe("StakingRewards", async () => {
 
       // Releasable fees amount to 10% of the contract balance
       await expect(
-        this.stakingRewardsContract.connect(this.justfarming).release(),
-      ).to.changeEtherBalance(this.justfarming, ethers.parseEther("0.001"));
+        this.stakingRewardsContract.connect(this.w3labs).release(),
+      ).to.changeEtherBalance(this.w3labs, ethers.parseEther("0.001"));
 
       // Expect to keep track of the amount released
       expect(await this.stakingRewardsContract.totalReleased()).to.equal(
@@ -555,7 +555,7 @@ describe("StakingRewards", async () => {
         await this.stakingRewardsContract.released(this.customer.address),
       ).to.equal(ethers.parseEther("0.0"));
       expect(
-        await this.stakingRewardsContract.released(this.justfarming.address),
+        await this.stakingRewardsContract.released(this.w3labs.address),
       ).to.equal(ethers.parseEther("0.001"));
 
       // Releasable rewards amount to 90% of the contract balance
@@ -571,7 +571,7 @@ describe("StakingRewards", async () => {
         await this.stakingRewardsContract.released(this.customer.address),
       ).to.equal(ethers.parseEther("0.009"));
       expect(
-        await this.stakingRewardsContract.released(this.justfarming.address),
+        await this.stakingRewardsContract.released(this.w3labs.address),
       ).to.equal(ethers.parseEther("0.001"));
     });
   });

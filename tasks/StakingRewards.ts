@@ -5,7 +5,7 @@ task("staking-rewards:deploy", "deploy the StakingRewards contract")
     "batchDepositContractAddress",
     "The address of the BatchDeposit contract",
   )
-  .addParam("feeAddress", "The address of the Justfarming fee wallet")
+  .addParam("feeAddress", "The address of the w3.labs fee wallet")
   .addParam("feeBasisPoints", "The fee (in basis points)")
   .addParam(
     "rewardsAddress",

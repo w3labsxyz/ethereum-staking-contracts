@@ -1,7 +1,7 @@
 {
-  "name": "@justfarming/contracts",
+  "name": "@w3labsxyz/ethereum-staking-contracts",
   "version": "0.1.0",
-  "description": "Smart contracts powering the Justfarming platform.",
+  "description": "Smart contracts powering the w3.labs staking platform.",
   "main": "none",
   "scripts": {
     "test": "HARDHAT_TESTING=true npx hardhat test",
@@ -14,19 +14,19 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/justfarming/contracts.git"
+    "url": "git+ssh://git@github.com/w3labsxyz/ethereum-staking-contracts.git"
   },
   "keywords": [
-    "justfarming",
+    "w3labs",
     "ethereum",
     "smart-contracts"
   ],
-  "author": "Tom König <tom@justfarming.xyz>",
+  "author": "Tom König <tom@w3labs.xyz>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/justfarming/contracts/issues"
+    "url": "https://github.com/w3labsxyz/ethereum-staking-contracts/issues"
   },
-  "homepage": "https://github.com/justfarming/contracts#readme",
+  "homepage": "https://github.com/w3labsxyz/ethereum-staking-contracts#readme",
   "dependencies": {
     "@openzeppelin/contracts": "^4.9.3",
     "ethers": "^6.7.1",

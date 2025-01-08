@@ -3,7 +3,7 @@ import { execSync } from "child_process";
 import { expect } from "chai";
 
 const ETHDO_CONFIG = {
-  wallet: "Justfarming Development",
+  wallet: "w3labs Development",
   passphrase: "test",
   mnemonic:
     "giant issue aisle success illegal bike spike question tent bar rely arctic volcano long crawl hungry vocal artwork sniff fantasy very lucky have athlete",
@@ -89,8 +89,7 @@ function createValidatorDeposits(
 
 describe("BatchDeposit", async () => {
   beforeEach(async function () {
-    const [_deployer, justfarmingFeeWallet, customer] =
-      await ethers.getSigners();
+    const [_deployer, w3labsFeeWallet, customer] = await ethers.getSigners();
 
     this.ethereumStakingDepositContract = await ethers.deployContract(
       "DepositContract",
@@ -114,7 +113,7 @@ describe("BatchDeposit", async () => {
       "StakingRewards",
       [
         this.batchDepositContract.target,
-        justfarmingFeeWallet.address,
+        w3labsFeeWallet.address,
         customer.address,
         1000,
       ],
@@ -123,7 +122,7 @@ describe("BatchDeposit", async () => {
 
   describe("not payable", async () => {
     it("throws a custom error `NotPayable` when trying to send ETH", async function () {
-      const [_deployer, _justfarmingFeeWallet, _customer, randomUser] =
+      const [_deployer, _w3labsFeeWallet, _customer, randomUser] =
         await ethers.getSigners();
 
       await expect(

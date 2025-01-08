@@ -1,17 +1,17 @@
-# Justfarming Contracts
+# w3.labs Staking Contracts
 
-This repository contains the smart contract code for the Justfarming platform.
+This repository contains the smart contract code for the w3.labs staking platform.
 Contracts are organized in the [`contracts`](/contracts) directory. [`interfaces`](/contracts/interfaces) implement external interfaces we depend on, [`lib`](/contracts/lib) contains our actual contracts and [`test`](/contracts/test) the mocked contracts for testing.
 
 ## Contracts
 
 ### StakingRewards
 
-The Justfarming StakingRewards contract manages the allocation of staking rewards between a staking customer and the platform. The primary contract `StakingRewards.sol` implements a pull-based approach for withdrawing validator rewards and fees respectively. For more information, see `contracts/lib/StakingRewards.sol`.
+The w3.labs StakingRewards contract manages the allocation of staking rewards between a staking customer and the platform. The primary contract `StakingRewards.sol` implements a pull-based approach for withdrawing validator rewards and fees respectively. For more information, see `contracts/lib/StakingRewards.sol`.
 
 ### BatchDeposit
 
-The Justfarming BatchDeposit contract enables deployment of multiple Ethereum validators at once. The `BatchDeposit.sol` contract interacts with the Ethereum staking deposit contract. For more information, see `contracts/lib/BatchDeposit.sol`.
+The w3.labs BatchDeposit contract enables deployment of multiple Ethereum validators at once. The `BatchDeposit.sol` contract interacts with the Ethereum staking deposit contract. For more information, see `contracts/lib/BatchDeposit.sol`.
 
 Credits also go to [stakefish](https://www.stake.fish) and [abyss](https://www.abyss.finance) who have built their batch depositors in the open:
 
@@ -49,19 +49,19 @@ The Justfaring contracts project uses the [Truffle Suite](https://trufflesuite.c
 
 With `node`, you can proceed with installing the project-specific dependencies:
 
-``` shell
+```shell
 npm install
 ```
 
 For static analysis, [Slither](https://github.com/crytic/slither) is used as a tools for performing automated security analysis on the smart contracts.
 
-``` shell
+```shell
 pip3 install slither-analyzer
 ```
 
 `solc-select` is being used for managing the solidity version in use.
 
-``` shell
+```shell
 pip3 install solc-select
 solc-select install 0.8.21
 solc-select use 0.8.21
@@ -73,19 +73,19 @@ solc-select use 0.8.21
 
 You can lint `.js` and `.ts` files with
 
-``` shell
+```shell
 npm run lint:ts
 ```
 
 as well as the `.sol` files with
 
-``` shell
+```shell
 npm run lint:sol
 ```
 
 Most issues can be fixed with
 
-``` shell
+```shell
 npm run lint:ts -- --fix
 npm run fmt
 ```
@@ -94,25 +94,23 @@ npm run fmt
 
 To run the analyzer:
 
-``` shell
+```shell
 npm run analyze
 ```
 
 ### Testing
 
-
 To run the tests, you can run:
 
-``` shell
+```shell
 npm run test
 ```
 
 #### Generate test-coverage
 
-
 To generate test coverage information, you can run:
 
-``` shell
+```shell
 npm run test:coverage
 ```
 
@@ -120,13 +118,13 @@ npm run test:coverage
 
 Manual tests can be conducted using [`ethdo`](https://github.com/wealdtech/ethdo), which can be installed using `go`:
 
-``` shell
+```shell
 go install github.com/wealdtech/ethdo@latest
 ```
 
-``` shell
-export ETHDO_WALLET_NAME="Justfarming Development"
-export ETHDO_PASSPHRASE="Justfarming Development"
+```shell
+export ETHDO_WALLET_NAME="w3labs Development"
+export ETHDO_PASSPHRASE="w3labs Development"
 export ETHDO_MNEMONIC="..."
 export ETHDO_ACCOUNT_INDEX=1
 export ETHDO_CONFIG_WITHDRAWAL_ADDRESS=0x...
@@ -155,15 +153,16 @@ In addition to the previously mentioned requirements, you will need the followin
 
 ###### Launch a local ethereum network
 
-``` shell
-kurtosis run --enclave justfarming-contracts config/localnet/main.star "$(cat ./config/localnet/params.json)"
+```shell
+kurtosis run --enclave w3labs-contracts config/localnet/main.star "$(cat ./config/localnet/params.json)"
 ```
 
 Please note that you will need to wait 120 seconds until genesis.
 
 With default settings being used, the network will run at `http://127.0.0.1:64248`.
 Prefunded accounts use the following private keys ([source](https://github.com/kurtosis-tech/eth-network-package/blob/main/src/prelaunch_data_generator/genesis_constants/genesis_constants.star)):
-``` md
+
+```md
 ef5177cd0b6b21c87db5a0bf35d4084a8a57a9d6a064f86d51ac85f2b873a4e2
 48fcc39ae27a0e8bf0274021ae6ebd8fe4a0e12623d61464c498900b28feb567
 7988b3a148716ff800414935b305436493e1f25237a2a03e5eebc343735e2f31
@@ -175,7 +174,8 @@ df9bb6de5d3dc59595bcaa676397d837ff49441d211878c024eabda2cd067c9f
 ###### Deploying
 
 Find the rpc port of your locally running execution client by running
-``` shell
+
+```shell
 npx hardhat update-rpc-port
 # Remember to source the env
 source .env
@@ -189,15 +189,14 @@ You can now deploy and interact with the contracts.
 
 There are 32 validators running, awaiting activation, with their keys derived the following mnemonic:
 
-``` text
+```text
 flee title shaft evoke stable vote injury ten strong farm obtain pause record rural device cotton hollow echo good acquire scrub buzz vacant liar
 ```
 
 To deposit to one or multiple of these validators, you'll need to first create deposit data. The following examples use `ethdo` as mentioned in the testing section.
 
-
-``` shell
-export ETHDO_CONFIG_WALLET=Justfarming Development
+```shell
+export ETHDO_CONFIG_WALLET="w3albs Development"
 export ETHDO_CONFIG_PASSPHRASE=test
 export ETHDO_CONFIG_MNEMONIC="flee title shaft evoke stable vote injury ten strong farm obtain pause record rural device cotton hollow echo good acquire scrub buzz vacant liar"
 export ETHDO_CONFIG_WITHDRAWAL_ADDRESS=$JF_STAKING_REWARDS_CONTRACT_ADDRESS
@@ -207,22 +206,22 @@ ethdo wallet create --wallet="${ETHDO_CONFIG_WALLET}" --type="hd" --wallet-passp
 for ETHDO_VALIDATOR_INDEX in {0..31}
 do
     ethdo account create --account="${ETHDO_CONFIG_WALLET}/Validators/${ETHDO_VALIDATOR_INDEX}" --wallet-passphrase="${ETHDO_CONFIG_PASSPHRASE}" --passphrase="${ETHDO_CONFIG_PASSPHRASE}" --allow-weak-passphrases --path="m/12381/3600/${ETHDO_VALIDATOR_INDEX}/0/0"
-    ethdo validator depositdata --validatoraccount="${ETHDO_CONFIG_WALLET}/Validators/${ETHDO_VALIDATOR_INDEX}" --depositvalue="32Ether" --withdrawaladdress="${ETHDO_CONFIG_WITHDRAWAL_ADDRESS}" --passphrase="${ETHDO_CONFIG_PASSPHRASE}" > /tmp/justfarming-local-validator-depositdata-${ETHDO_VALIDATOR_INDEX}.json
+    ethdo validator depositdata --validatoraccount="${ETHDO_CONFIG_WALLET}/Validators/${ETHDO_VALIDATOR_INDEX}" --depositvalue="32Ether" --withdrawaladdress="${ETHDO_CONFIG_WITHDRAWAL_ADDRESS}" --passphrase="${ETHDO_CONFIG_PASSPHRASE}" > /tmp/w3labs-local-validator-depositdata-${ETHDO_VALIDATOR_INDEX}.json
 done
 
 # Get public keys
-ls /tmp/justfarming-local-validator-*.json | xargs -I {} jq -r '.[0].pubkey' {} | awk 'BEGIN{ORS=","} {print}' | sed 's/,$/\n/' > /tmp/justfarming-local-validator-pubkeys.txt
+ls /tmp/w3labs-local-validator-*.json | xargs -I {} jq -r '.[0].pubkey' {} | awk 'BEGIN{ORS=","} {print}' | sed 's/,$/\n/' > /tmp/w3labs-local-validator-pubkeys.txt
 
 # Get signatures
-ls /tmp/justfarming-local-validator-*.json | xargs -I {} jq -r '.[0].signature' {} | awk 'BEGIN{ORS=","} {print}' | sed 's/,$/\n/' > /tmp/justfarming-local-validator-signatures.txt
+ls /tmp/w3labs-local-validator-*.json | xargs -I {} jq -r '.[0].signature' {} | awk 'BEGIN{ORS=","} {print}' | sed 's/,$/\n/' > /tmp/w3labs-local-validator-signatures.txt
 
 # Get deposit data roots
-ls /tmp/justfarming-local-validator-*.json | xargs -I {} jq -r '.[0].deposit_data_root' {} | awk 'BEGIN{ORS=","} {print}' | sed 's/,$/\n/' > /tmp/justfarming-local-validator-deposit-data-roots.txt
+ls /tmp/w3labs-local-validator-*.json | xargs -I {} jq -r '.[0].deposit_data_root' {} | awk 'BEGIN{ORS=","} {print}' | sed 's/,$/\n/' > /tmp/w3labs-local-validator-deposit-data-roots.txt
 ```
 
 You can now extract the respective depositdata from the created depositdata files in `/tmp`. For example, get the pubkeys for registering them with the BatchDeposit contract:
 
-``` shell
+```shell
 # deploy the BatchDeposit contract
 npx hardhat batch-deposit:deploy --network localnet --ethereum-deposit-contract-address 0x4242424242424242424242424242424242424242
 # export the address afterwards: export JF_BATCH_DEPOSIT_CONTRACT_ADDRESS=0x...
@@ -244,7 +243,7 @@ npx hardhat staking-rewards:deploy --network localnet --batch-deposit-contract-a
 # export the address afterwards: export JF_STAKING_REWARDS_CONTRACT_ADDRESS=0xBFF5cD0aA560e1d1C6B1E2C347860aDAe1bd8235
 
 # excute a native ethereum staking deposit
-npx hardhat native-staking:deposit --network localnet --ethereum-deposit-contract-address 0x4242424242424242424242424242424242424242 --deposit-data-path /tmp/justfarming-local-validator-depositdata-16.json
+npx hardhat native-staking:deposit --network localnet --ethereum-deposit-contract-address 0x4242424242424242424242424242424242424242 --deposit-data-path /tmp/w3labs-local-validator-depositdata-16.json
 
 # Listing all deposits
 npx hardhat --network localnet debug:list-deposits --ethereum-deposit-contract-address 0x4242424242424242424242424242424242424242
@@ -253,22 +252,23 @@ npx hardhat --network localnet debug:list-deposits --ethereum-deposit-contract-a
 npx hardhat --network localnet debug:transaction --tx-hash 0xbc0ce66317705141485622a5c30e91f6a54fbae7a601056563887688c72e6949
 ```
 
-``` bash
-ls /tmp/justfarming-local-validator-*.json | xargs -I {} jq -r '.[0].pubkey' {}
+```bash
+ls /tmp/w3labs-local-validator-*.json | xargs -I {} jq -r '.[0].pubkey' {}
 ```
 
 ###### Observing
 
 You can stream the logs of these validator nodes with:
-``` shell
-docker logs -f $(docker ps | grep justfarming-lighthouse-validator | awk '{print $1}' | tr -d '\n')
+
+```shell
+docker logs -f $(docker ps | grep w3labs-lighthouse-validator | awk '{print $1}' | tr -d '\n')
 ```
 
 this is especially helpful for observing validators become active upon using `BatchDepoit.sol`.
 
 You can use `ethdo` to inspect validators:
 
-``` shell
+```shell
 # Get general chain info
 ethdo --connection=http://localhost:$CL_RPC_PORT chain info
 
@@ -282,7 +282,7 @@ ethdo --connection=http://localhost:$CL_RPC_PORT validator info --validator 0xb8
 
 Remember to clean up when you are done.
 
-``` shell
+```shell
 # Clean up kurtosis
 kurtosis clean -a
 
@@ -294,6 +294,6 @@ ethdo wallet delete --wallet="${ETHDO_CONFIG_WALLET}"
 
 To deploy the contracts to a network:
 
-``` shell
+```shell
 npx hardhat ...
 ```
