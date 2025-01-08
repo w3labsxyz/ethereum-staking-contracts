@@ -31,7 +31,7 @@ const config: HardhatUserConfig = {
     },
     localnet: {
       url: `http://127.0.0.1:${process.env.EL_RPC_PORT}`,
-      chainId: 3151908,
+      chainId: 1337,
       // These are private keys associated with prefunded test accounts created by the eth-network-package
       // https://github.com/ethpandaops/ethereum-package/blob/main/src/prelaunch_data_generator/genesis_constants/genesis_constants.star
       accounts: [
@@ -47,6 +47,14 @@ const config: HardhatUserConfig = {
         "850643a0224065ecce3882673c21f56bcf6eef86274cc21cadff15930b59fc8c", // 0x65D08a056c17Ae13370565B04cF77D2AfA1cB9FA
         "94eb3102993b41ec55c241060f47daa0f6372e2e3ad7e91612ae36c364042e44", // 0x3e95dFbBaF6B348396E6674C7871546dCC568e56
       ],
+    },
+    holesky: {
+      url: "https://ethereum-holesky.publicnode.com",
+      chainId: 17000,
+    },
+    mainnet: {
+      url: "https://ethereum.publicnode.com",
+      chainId: 1,
     },
   },
   paths: {

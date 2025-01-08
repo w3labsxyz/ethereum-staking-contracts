@@ -3,6 +3,15 @@
 This repository contains the smart contract code for the w3.labs staking platform.
 Contracts are organized in the [`contracts`](/contracts) directory. [`interfaces`](/contracts/interfaces) implement external interfaces we depend on, [`lib`](/contracts/lib) contains our actual contracts and [`test`](/contracts/test) the mocked contracts for testing.
 
+The following table lists the networks and respective addresses that the contracts have been deployed to:
+
+| Network | Chain Id | Contract        | Address |
+| ------- | -------- | --------------- | ------- |
+| Mainnet | 1        | Batch Deposit   | [0x]()  |
+| Mainnet | 1        | Staking Rewards | [0x]()  |
+| Holesky | 17000    | Batch Deposit   | [0x]()  |
+| Mainnet | 17000    | Staking Rewards | [0x]()  |
+
 ## Contracts
 
 ### StakingRewards
@@ -316,8 +325,33 @@ ethdo wallet delete --wallet="${ETHDO_CONFIG_WALLET}"
 
 ## Deployment
 
-To deploy the contracts to a network:
+To deploy the contracts to a network, follow the network specific instructions below.
+
+### Localnet
+
+Deploying to the locally running network is as simple as running:
 
 ```shell
-npx hardhat ...
+npx hardhat batch-deposit:deploy --network localnet --ethereum-deposit-contract-address 0x4242424242424242424242424242424242424242
+```
+
+### Holesky
+
+Deploying to Holesky requires [`Frame`](https://frame.sh) as the external signer. This setup enables the use of hardware wallets during the deployment.
+
+```shell
+npx hardhat batch-deposit:deploy-via-frame --network holesky --ethereum-deposit-contract-address 0x4242424242424242424242424242424242424242
+```
+
+### Localnet
+
+Deploying to the Ethereum mainnet requires [`Frame`](https://frame.sh) as the external signer. This setup enables the use of hardware wallets during the deployment.
+The Beacon Chain Deposit Contract address is `0x00000000219ab540356cBB839Cbe05303d7705Fa` and can be verified in different sources:
+
+- https://ethereum.org/staking/deposit-contract
+- https://etherscan.io/address/0x00000000219ab540356cbb839cbe05303d7705fa
+- https://github.com/ethereum/consensus-specs/blob/dev/configs/mainnet.yaml#L110
+
+```shell
+npx hardhat batch-deposit:deploy-via-frame --network mainnet --ethereum-deposit-contract-address 0x00000000219ab540356cBB839Cbe05303d7705Fa
 ```

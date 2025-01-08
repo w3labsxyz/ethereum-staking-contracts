@@ -1,6 +1,10 @@
 import { task } from "hardhat/config";
+import ethProvider from "eth-provider";
 
-task("batch-deposit:deploy", "deploy the BatchDeposit contract")
+task(
+  "batch-deposit:deploy",
+  "Deploy the BatchDeposit contract using the native hardhat/ethers signer",
+)
   .addParam(
     "ethereumDepositContractAddress",
     "The address of the Ethereum deposit contract",
@@ -45,6 +49,37 @@ task(
         isAvailable ? "available" : "unavailable"
       }`,
     );
+  });
+
+task(
+  "batch-deposit:deploy-via-frame",
+  "Deploy the BatchDeposit contract using Frame as the external signer",
+)
+  .addParam(
+    "ethereumDepositContractAddress",
+    "The address of the Ethereum deposit contract",
+  )
+  .setAction(async (args, hre) => {
+    // Establish a Frame connection
+    const frame = ethProvider("frame"); // Connect to Frame
+    // Derive deployment data
+    const BatchDeposit = await hre.ethers.getContractFactory("BatchDeposit");
+    const tx = await BatchDeposit.getDeployTransaction(
+      args.ethereumDepositContractAddress,
+    );
+    const accounts = await frame.request<string[]>({
+      method: "eth_requestAccounts",
+    });
+    // Set the `tx.from` to the current Frame account
+    tx.from = accounts[0];
+    // Enforce the chain ID
+    tx.chainId = hre.network.config.chainId as any;
+    // Sign and send the transaction using Frame
+    const txId = await frame.request<string>({
+      method: "eth_sendTransaction",
+      params: [tx],
+    });
+    console.log(`BatchDeposit contract has been deployed in tx: ${txId}`);
   });
 
 task("batch-deposit:register-validators", "Registers multiple validators")
