@@ -69,6 +69,15 @@ solc-select use 0.8.21
 
 ## Developing
 
+### Compiling
+
+To compile the contracts for use in web applications using [`wagmi`](https://wagmi.sh), you can run:
+
+```shell
+npx hardhat compile
+npx hardhat generate-typescript-abi
+```
+
 ### Linting
 
 You can lint `.js` and `.ts` files with

@@ -4,6 +4,7 @@ import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 import "solidity-coverage";
 
+import "./tasks/abi";
 import "./tasks/BatchDeposit";
 import "./tasks/StakingRewards";
 import "./tasks/enclave";
