@@ -369,5 +369,5 @@ npx hardhat batch-deposit:deploy-via-frame --network mainnet --ethereum-deposit-
 # export the address afterwards: export BATCH_DEPOSIT_CONTRACT_ADDRESS=0x...
 
 # Verify the contract
-npm run verify -- --network holesky $BATCH_DEPOSIT_CONTRACT_ADDRESS "0x00000000219ab540356cBB839Cbe05303d7705Fa"
+npm run verify -- --network mainnet $BATCH_DEPOSIT_CONTRACT_ADDRESS "0x00000000219ab540356cBB839Cbe05303d7705Fa"
 ```
