@@ -325,7 +325,13 @@ ethdo wallet delete --wallet="${ETHDO_CONFIG_WALLET}"
 
 ## Deployment
 
-Follow the network-specific instructions below to deploy the contracts to a network.
+Compile the contracts with:
+
+```shell
+npx hardhat compile
+```
+
+And continue by following the network-specific instructions below to deploy the contracts to a network.
 
 ### Localnet
 
