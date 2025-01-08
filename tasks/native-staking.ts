@@ -2,7 +2,6 @@ import * as fs from "fs";
 
 import { task } from "hardhat/config";
 
-// Define your hardhat task
 task("native-staking:deposit", "Deposits funds directly into the Eth2 contract")
   .addParam(
     "ethereumDepositContractAddress",

@@ -123,8 +123,8 @@ go install github.com/wealdtech/ethdo@latest
 ```
 
 ```shell
-export ETHDO_WALLET_NAME="w3labs Development"
-export ETHDO_PASSPHRASE="w3labs Development"
+export ETHDO_WALLET_NAME="Development"
+export ETHDO_PASSPHRASE="Development"
 export ETHDO_MNEMONIC="..."
 export ETHDO_ACCOUNT_INDEX=1
 export ETHDO_CONFIG_WITHDRAWAL_ADDRESS=0x...
@@ -139,7 +139,7 @@ ethdo wallet delete --wallet="${ETHDO_WALLET_NAME}"
 ethdo account create --account="${ETHDO_WALLET_NAME}/Validators/${ETHDO_ACCOUNT_INDEX}" --wallet-passphrase="${ETHDO_PASSPHRASE}" --passphrase="${ETHDO_PASSPHRASE}" --allow-weak-passphrases --path="m/12381/3600/${ETHDO_ACCOUNT_INDEX}/0/0"
 
 # Create deposit data for a new validator
-ethdo validator depositdata --validatoraccount="${ETHDO_WALLET_NAME}/Validators/${ETHDO_ACCOUNT_INDEX}" --depositvalue="32Ether" --withdrawaladdress="${ETHDO_CONFIG_WITHDRAWAL_ADDRESS}" --passphrase="${ETHDO_PASSPHRASE}"
+ethdo validator depositdata --validatoraccount="${ETHDO_WALLET_NAME}/Validators/${ETHDO_ACCOUNT_INDEX}" --depositvalue="32Ether" --withdrawaladdress="${ETHDO_CONFIG_WITHDRAWAL_ADDRESS}" --passphrase="${ETHDO_PASSPHRASE}" --forkversion="0x10000038"
 ```
 
 #### Integration testing
@@ -149,7 +149,7 @@ ethdo validator depositdata --validatoraccount="${ETHDO_WALLET_NAME}/Validators/
 In addition to the previously mentioned requirements, you will need the following in order to run the local testnet:
 
 - [Setup docker](https://docs.kurtosis.com/next/install#i-install--start-docker)
-- [Install kurtosis](https://docs.kurtosis.com/next/install#ii-install-the-cli)
+- [Install kurtosis](https://docs.kurtosis.com/install#ii-install-the-cli)
 
 ###### Launch a local ethereum network
 
@@ -157,19 +157,24 @@ In addition to the previously mentioned requirements, you will need the followin
 kurtosis run --enclave w3labs-contracts config/localnet/main.star "$(cat ./config/localnet/params.json)"
 ```
 
-Please note that you will need to wait 120 seconds until genesis.
+Please note that you will need to wait 20 seconds until genesis.
 
 With default settings being used, the network will run at `http://127.0.0.1:64248`.
-Prefunded accounts use the following private keys ([source](https://github.com/kurtosis-tech/eth-network-package/blob/main/src/prelaunch_data_generator/genesis_constants/genesis_constants.star)):
+Prefunded accounts use the following private keys ([source](https://github.com/ethpandaops/ethereum-package/blob/main/src/prelaunch_data_generator/genesis_constants/genesis_constants.star)):
 
-```md
-ef5177cd0b6b21c87db5a0bf35d4084a8a57a9d6a064f86d51ac85f2b873a4e2
-48fcc39ae27a0e8bf0274021ae6ebd8fe4a0e12623d61464c498900b28feb567
-7988b3a148716ff800414935b305436493e1f25237a2a03e5eebc343735e2f31
-b3c409b6b0b3aa5e65ab2dc1930534608239a478106acf6f3d9178e9f9b00b35
-df9bb6de5d3dc59595bcaa676397d837ff49441d211878c024eabda2cd067c9f
-7da08f856b5956d40a72968f93396f6acff17193f013e8053f6fbb6c08c194d6
-```
+| Private Key                                                      | Address                                    |
+| ---------------------------------------------------------------- | ------------------------------------------ |
+| bcdf20249abf0ed6d944c0288fad489e33f66b3960d9e6229c1cd214ed3bbe31 | 0x8943545177806ED17B9F23F0a21ee5948eCaa776 |
+| 39725efee3fb28614de3bacaffe4cc4bd8c436257e2c8bb887c4b5c4be45e76d | 0xE25583099BA105D9ec0A67f5Ae86D90e50036425 |
+| 53321db7c1e331d93a11a41d16f004d7ff63972ec8ec7c25db329728ceeb1710 | 0x614561D2d143621E126e87831AEF287678B442b8 |
+| ab63b23eb7941c1251757e24b3d2350d2bc05c3c388d06f8fe6feafefb1e8c70 | 0xf93Ee4Cf8c6c40b329b0c0626F28333c132CF241 |
+| 5d2344259f42259f82d2c140aa66102ba89b57b4883ee441a8b312622bd42491 | 0x802dCbE1B1A97554B4F50DB5119E37E8e7336417 |
+| 27515f805127bebad2fb9b183508bdacb8c763da16f54e0678b16e8f28ef3fff | 0xAe95d8DA9244C37CaC0a3e16BA966a8e852Bb6D6 |
+| 7ff1a4c1d57e5e784d327c4c7651e952350bc271f156afb3d00d20f5ef924856 | 0x2c57d1CFC6d5f8E4182a56b4cf75421472eBAEa4 |
+| 3a91003acaf4c21b3953d94fa4a6db694fa69e5242b2e37be05dd82761058899 | 0x741bFE4802cE1C4b5b00F9Df2F5f179A1C89171A |
+| bb1d0f125b4fb2bb173c318cdead45468474ca71474e2247776b2b4c0fa2d3f5 | 0xc3913d4D8bAb4914328651C2EAE817C8b78E1f4c |
+| 850643a0224065ecce3882673c21f56bcf6eef86274cc21cadff15930b59fc8c | 0x65D08a056c17Ae13370565B04cF77D2AfA1cB9FA |
+| 94eb3102993b41ec55c241060f47daa0f6372e2e3ad7e91612ae36c364042e44 | 0x3e95dFbBaF6B348396E6674C7871546dCC568e56 |
 
 ###### Deploying
 
@@ -196,7 +201,8 @@ flee title shaft evoke stable vote injury ten strong farm obtain pause record ru
 To deposit to one or multiple of these validators, you'll need to first create deposit data. The following examples use `ethdo` as mentioned in the testing section.
 
 ```shell
-export ETHDO_CONFIG_WALLET="w3albs Development"
+export WITHDRAWAL_ADDRESS=0x8943545177806ED17B9F23F0a21ee5948eCaa776
+export ETHDO_CONFIG_WALLET="Development"
 export ETHDO_CONFIG_PASSPHRASE=test
 export ETHDO_CONFIG_MNEMONIC="flee title shaft evoke stable vote injury ten strong farm obtain pause record rural device cotton hollow echo good acquire scrub buzz vacant liar"
 export ETHDO_CONFIG_WITHDRAWAL_ADDRESS=$JF_STAKING_REWARDS_CONTRACT_ADDRESS
@@ -206,17 +212,24 @@ ethdo wallet create --wallet="${ETHDO_CONFIG_WALLET}" --type="hd" --wallet-passp
 for ETHDO_VALIDATOR_INDEX in {0..31}
 do
     ethdo account create --account="${ETHDO_CONFIG_WALLET}/Validators/${ETHDO_VALIDATOR_INDEX}" --wallet-passphrase="${ETHDO_CONFIG_PASSPHRASE}" --passphrase="${ETHDO_CONFIG_PASSPHRASE}" --allow-weak-passphrases --path="m/12381/3600/${ETHDO_VALIDATOR_INDEX}/0/0"
-    ethdo validator depositdata --validatoraccount="${ETHDO_CONFIG_WALLET}/Validators/${ETHDO_VALIDATOR_INDEX}" --depositvalue="32Ether" --withdrawaladdress="${ETHDO_CONFIG_WITHDRAWAL_ADDRESS}" --passphrase="${ETHDO_CONFIG_PASSPHRASE}" > /tmp/w3labs-local-validator-depositdata-${ETHDO_VALIDATOR_INDEX}.json
+    ethdo validator depositdata --validatoraccount="${ETHDO_CONFIG_WALLET}/Validators/${ETHDO_VALIDATOR_INDEX}" --depositvalue="32Ether" --withdrawaladdress="${ETHDO_CONFIG_WITHDRAWAL_ADDRESS}" --passphrase="${ETHDO_CONFIG_PASSPHRASE}" --forkversion="0x10000038" > /tmp/local-validator-depositdata-${ETHDO_VALIDATOR_INDEX}.json
 done
 
 # Get public keys
-ls /tmp/w3labs-local-validator-*.json | xargs -I {} jq -r '.[0].pubkey' {} | awk 'BEGIN{ORS=","} {print}' | sed 's/,$/\n/' > /tmp/w3labs-local-validator-pubkeys.txt
+ls /tmp/local-validator-*.json | xargs -I {} jq -r '.[0].pubkey' {} | awk 'BEGIN{ORS=","} {print}' | sed 's/,$/\n/' > /tmp/local-validator-pubkeys.txt
 
 # Get signatures
-ls /tmp/w3labs-local-validator-*.json | xargs -I {} jq -r '.[0].signature' {} | awk 'BEGIN{ORS=","} {print}' | sed 's/,$/\n/' > /tmp/w3labs-local-validator-signatures.txt
+ls /tmp/local-validator-*.json | xargs -I {} jq -r '.[0].signature' {} | awk 'BEGIN{ORS=","} {print}' | sed 's/,$/\n/' > /tmp/local-validator-signatures.txt
 
 # Get deposit data roots
-ls /tmp/w3labs-local-validator-*.json | xargs -I {} jq -r '.[0].deposit_data_root' {} | awk 'BEGIN{ORS=","} {print}' | sed 's/,$/\n/' > /tmp/w3labs-local-validator-deposit-data-roots.txt
+ls /tmp/local-validator-*.json | xargs -I {} jq -r '.[0].deposit_data_root' {} | awk 'BEGIN{ORS=","} {print}' | sed 's/,$/\n/' > /tmp/local-validator-deposit-data-roots.txt
+
+# Concatenate depositdata
+echo '[' > /tmp/local-validator-depositdata.json
+cat /tmp/local-validator-depositdata-*.json | jq -c '.[]' | sed '$!s/$/,/' >> /tmp/local-validator-depositdata.json
+echo ']' >> /tmp/local-validator-depositdata.json
+# Remove the development wallet
+ethdo wallet delete --wallet="${ETHDO_CONFIG_WALLET}"
 ```
 
 You can now extract the respective depositdata from the created depositdata files in `/tmp`. For example, get the pubkeys for registering them with the BatchDeposit contract:
@@ -224,26 +237,26 @@ You can now extract the respective depositdata from the created depositdata file
 ```shell
 # deploy the BatchDeposit contract
 npx hardhat batch-deposit:deploy --network localnet --ethereum-deposit-contract-address 0x4242424242424242424242424242424242424242
-# export the address afterwards: export JF_BATCH_DEPOSIT_CONTRACT_ADDRESS=0x...
+# export the address afterwards: export BATCH_DEPOSIT_CONTRACT_ADDRESS=0x...
 
 # register valiadtors as available
-npx hardhat batch-deposit:register-validators --network localnet --batch-deposit-contract-address $JF_BATCH_DEPOSIT_CONTRACT_ADDRESS --validator-public-keys "0x8e1b5d5d2938c6ae35445875f5a6410d8a8f6b93b486ee795632ef1cc9329849e91098a4d86108199ea9f017a4f57ce3,0x8c35be170b4741be1314e22d46e0a8ddca9d08c182bcd9f37e85a1fd1ea0d37dbcf972e13a86f2ba369066d098140694,0xb8c4b28d46a73aa82c400b7f159645b097953d37e2ca98908bc236b5b6292a6ba3a0612e8454867a3f9f38a1c8184d0f"
+npx hardhat batch-deposit:register-validators --network localnet --batch-deposit-contract-address $BATCH_DEPOSIT_CONTRACT_ADDRESS --validator-public-keys "0x8e1b5d5d2938c6ae35445875f5a6410d8a8f6b93b486ee795632ef1cc9329849e91098a4d86108199ea9f017a4f57ce3,0x8c35be170b4741be1314e22d46e0a8ddca9d08c182bcd9f37e85a1fd1ea0d37dbcf972e13a86f2ba369066d098140694,0xb8c4b28d46a73aa82c400b7f159645b097953d37e2ca98908bc236b5b6292a6ba3a0612e8454867a3f9f38a1c8184d0f"
 
 # validate availability of a specific validator public key
-npx hardhat batch-deposit:is-validator-available --network localnet --batch-deposit-contract-address $JF_BATCH_DEPOSIT_CONTRACT_ADDRESS --validator-public-key 0x8e1b5d5d2938c6ae35445875f5a6410d8a8f6b93b486ee795632ef1cc9329849e91098a4d86108199ea9f017a4f57ce3
+npx hardhat batch-deposit:is-validator-available --network localnet --batch-deposit-contract-address $BATCH_DEPOSIT_CONTRACT_ADDRESS --validator-public-key 0x8e1b5d5d2938c6ae35445875f5a6410d8a8f6b93b486ee795632ef1cc9329849e91098a4d86108199ea9f017a4f57ce3
 
 # validate un-availability of a specific validator public key
-npx hardhat batch-deposit:is-validator-available --network localnet --batch-deposit-contract-address $JF_BATCH_DEPOSIT_CONTRACT_ADDRESS --validator-public-key 0x96b26551fa223f8509b13e651d4bde3749d93df13ca2c45f89d2d96a19cfaaf6bb6600cba7ec4f280de246479af4472d
+npx hardhat batch-deposit:is-validator-available --network localnet --batch-deposit-contract-address $BATCH_DEPOSIT_CONTRACT_ADDRESS --validator-public-key 0x96b26551fa223f8509b13e651d4bde3749d93df13ca2c45f89d2d96a19cfaaf6bb6600cba7ec4f280de246479af4472d
 
 # deposit to multiple validators
-npx hardhat batch-deposit:batch-deposit --network localnet --batch-deposit-contract-address $JF_BATCH_DEPOSIT_CONTRACT_ADDRESS --staking-rewards-contract-address $JF_STAKING_REWARDS_CONTRACT_ADDRESS --validator-public-keys "0x8e1b5d5d2938c6ae35445875f5a6410d8a8f6b93b486ee795632ef1cc9329849e91098a4d86108199ea9f017a4f57ce3,0x8c35be170b4741be1314e22d46e0a8ddca9d08c182bcd9f37e85a1fd1ea0d37dbcf972e13a86f2ba369066d098140694,0xb8c4b28d46a73aa82c400b7f159645b097953d37e2ca98908bc236b5b6292a6ba3a0612e8454867a3f9f38a1c8184d0f" --validator-signatures "..." --validator-deposit-data-roots "..."
+npx hardhat batch-deposit:batch-deposit --network localnet --batch-deposit-contract-address $BATCH_DEPOSIT_CONTRACT_ADDRESS --staking-rewards-contract-address $JF_STAKING_REWARDS_CONTRACT_ADDRESS --validator-public-keys "0x8e1b5d5d2938c6ae35445875f5a6410d8a8f6b93b486ee795632ef1cc9329849e91098a4d86108199ea9f017a4f57ce3,0x8c35be170b4741be1314e22d46e0a8ddca9d08c182bcd9f37e85a1fd1ea0d37dbcf972e13a86f2ba369066d098140694,0xb8c4b28d46a73aa82c400b7f159645b097953d37e2ca98908bc236b5b6292a6ba3a0612e8454867a3f9f38a1c8184d0f" --validator-signatures "..." --validator-deposit-data-roots "..."
 
 # deploy the StakingRewards contract
-npx hardhat staking-rewards:deploy --network localnet --batch-deposit-contract-address $JF_BATCH_DEPOSIT_CONTRACT_ADDRESS --fee-address 0x4E9A3d9D1cd2A2b2371b8b3F489aE72259886f1A --fee-basis-points 1000 --rewards-address 0xdF8466f277964Bb7a0FFD819403302C34DCD530A
+npx hardhat staking-rewards:deploy --network localnet --batch-deposit-contract-address $BATCH_DEPOSIT_CONTRACT_ADDRESS --fee-address 0x4E9A3d9D1cd2A2b2371b8b3F489aE72259886f1A --fee-basis-points 1000 --rewards-address 0xdF8466f277964Bb7a0FFD819403302C34DCD530A
 # export the address afterwards: export JF_STAKING_REWARDS_CONTRACT_ADDRESS=0xBFF5cD0aA560e1d1C6B1E2C347860aDAe1bd8235
 
 # excute a native ethereum staking deposit
-npx hardhat native-staking:deposit --network localnet --ethereum-deposit-contract-address 0x4242424242424242424242424242424242424242 --deposit-data-path /tmp/w3labs-local-validator-depositdata-16.json
+npx hardhat native-staking:deposit --network localnet --ethereum-deposit-contract-address 0x4242424242424242424242424242424242424242 --deposit-data-path /tmp/local-validator-depositdata-16.json
 
 # Listing all deposits
 npx hardhat --network localnet debug:list-deposits --ethereum-deposit-contract-address 0x4242424242424242424242424242424242424242
@@ -252,8 +265,10 @@ npx hardhat --network localnet debug:list-deposits --ethereum-deposit-contract-a
 npx hardhat --network localnet debug:transaction --tx-hash 0xbc0ce66317705141485622a5c30e91f6a54fbae7a601056563887688c72e6949
 ```
 
+You can use the following command to get the public keys of the validators:
+
 ```bash
-ls /tmp/w3labs-local-validator-*.json | xargs -I {} jq -r '.[0].pubkey' {}
+ls /tmp/local-validator-*.json | xargs -I {} jq -r '.[0].pubkey' {}
 ```
 
 ###### Observing

@@ -48,8 +48,7 @@ async function getRPCPort(
 task("update-rpc-port", "Prints and persists the enclave RPC port").setAction(
   async () => {
     const elRpcPort = await getRPCPort("el-1-geth-lighthouse", "rpc: 8545");
-    const clRpcPort =
-      (await getRPCPort("cl-1-lighthouse-geth", "http: 4000")) - 1; // The RPC port is actually off by one ¯\_(ツ)_/¯
+    const clRpcPort = await getRPCPort("cl-1-lighthouse-geth", "http: 4000");
 
     if (elRpcPort < 0) {
       console.error(

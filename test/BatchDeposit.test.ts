@@ -3,7 +3,7 @@ import { execSync } from "child_process";
 import { expect } from "chai";
 
 const ETHDO_CONFIG = {
-  wallet: "w3labs Development",
+  wallet: "Development",
   passphrase: "test",
   mnemonic:
     "giant issue aisle success illegal bike spike question tent bar rely arctic volcano long crawl hungry vocal artwork sniff fantasy very lucky have athlete",
