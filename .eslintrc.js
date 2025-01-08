@@ -45,5 +45,6 @@ module.exports = {
       { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
     ],
     "no-underscore-dangle": "off",
+    "no-console": "off",
   },
 };

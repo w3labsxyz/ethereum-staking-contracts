@@ -91,7 +91,7 @@ task("debug:transaction", "Debugs a transaction")
       hre.config.networks.localnet.url,
     );
     const txReceipt = await provider.getTransactionReceipt(txHash);
-    const tx = await provider.getTransaction(txHash);
+    await provider.getTransaction(txHash);
 
     if (txReceipt === null) {
       console.log("Transaction not found or still pending.");
