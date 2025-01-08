@@ -39,7 +39,7 @@ task(
 
   const artifact = JSON.parse(fs.readFileSync(artifactPath, "utf8"));
 
-  const abi = artifact.abi;
+  const { abi } = artifact;
 
   const tsContent = `export const abi = ${JSON.stringify(
     abi,
