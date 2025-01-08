@@ -20,7 +20,7 @@ The w3.labs StakingRewards contract manages the allocation of staking rewards be
 
 ### BatchDeposit
 
-The w3.labs BatchDeposit contract enables deployment of multiple Ethereum validators at once. The `BatchDeposit.sol` contract interacts with the Ethereum staking deposit contract. For more information, see `contracts/lib/BatchDeposit.sol`.
+The w3.labs BatchDeposit contract enables the deployment of multiple Ethereum validators at once. The `BatchDeposit.sol` contract interacts with the Ethereum staking deposit contract. For more information, see `contracts/lib/BatchDeposit.sol`.
 
 Credits also go to [stakefish](https://www.stake.fish) and [abyss](https://www.abyss.finance) who have built their batch depositors in the open:
 
@@ -62,13 +62,13 @@ With `node`, you can proceed with installing the project-specific dependencies:
 npm install
 ```
 
-For static analysis, [Slither](https://github.com/crytic/slither) is used as a tools for performing automated security analysis on the smart contracts.
+For static analysis, [Slither](https://github.com/crytic/slither) is used to perform automated security analysis on the smart contracts.
 
 ```shell
 pip3 install slither-analyzer
 ```
 
-`solc-select` is being used for managing the solidity version in use.
+We use `solc-select` for managing the active solidity version.
 
 ```shell
 pip3 install solc-select
@@ -216,7 +216,7 @@ There are 32 validators running, awaiting activation, with their keys derived th
 flee title shaft evoke stable vote injury ten strong farm obtain pause record rural device cotton hollow echo good acquire scrub buzz vacant liar
 ```
 
-To deposit to one or multiple of these validators, you'll need to first create deposit data. The following examples use `ethdo` as mentioned in the testing section.
+You'll need create deposit data first to deposit to one or multiple of these validators. The following examples use `ethdo` as mentioned in the testing section.
 
 ```shell
 export WITHDRAWAL_ADDRESS=0x8943545177806ED17B9F23F0a21ee5948eCaa776
@@ -297,7 +297,7 @@ You can stream the logs of these validator nodes with:
 docker logs -f $(docker ps | grep w3labs-lighthouse-validator | awk '{print $1}' | tr -d '\n')
 ```
 
-this is especially helpful for observing validators become active upon using `BatchDepoit.sol`.
+This is especially helpful for observing validators become active upon using `BatchDepoit.sol`.
 
 You can use `ethdo` to inspect validators:
 
@@ -325,7 +325,7 @@ ethdo wallet delete --wallet="${ETHDO_CONFIG_WALLET}"
 
 ## Deployment
 
-To deploy the contracts to a network, follow the network specific instructions below.
+Follow the network-specific instructions below to deploy the contracts to a network.
 
 ### Localnet
 
@@ -348,9 +348,9 @@ npx hardhat batch-deposit:deploy-via-frame --network holesky --ethereum-deposit-
 Deploying to the Ethereum mainnet requires [`Frame`](https://frame.sh) as the external signer. This setup enables the use of hardware wallets during the deployment.
 The Beacon Chain Deposit Contract address is `0x00000000219ab540356cBB839Cbe05303d7705Fa` and can be verified in different sources:
 
-- https://ethereum.org/staking/deposit-contract
-- https://etherscan.io/address/0x00000000219ab540356cbb839cbe05303d7705fa
-- https://github.com/ethereum/consensus-specs/blob/dev/configs/mainnet.yaml#L110
+- <https://ethereum.org/staking/deposit-contract>
+- <https://etherscan.io/address/0x00000000219ab540356cbb839cbe05303d7705fa>
+- <https://github.com/ethereum/consensus-specs/blob/dev/configs/mainnet.yaml#L110>
 
 ```shell
 npx hardhat batch-deposit:deploy-via-frame --network mainnet --ethereum-deposit-contract-address 0x00000000219ab540356cBB839Cbe05303d7705Fa
