@@ -347,9 +347,14 @@ Deploying to Holesky requires [`Frame`](https://frame.sh) as the external signer
 
 ```shell
 npx hardhat batch-deposit:deploy-via-frame --network holesky --ethereum-deposit-contract-address 0x4242424242424242424242424242424242424242
+
+# export the address afterwards: export BATCH_DEPOSIT_CONTRACT_ADDRESS=0x...
+
+# Verify the contract
+npm run verify -- --network holesky $BATCH_DEPOSIT_CONTRACT_ADDRESS "0x4242424242424242424242424242424242424242"
 ```
 
-### Localnet
+### Mainnet
 
 Deploying to the Ethereum mainnet requires [`Frame`](https://frame.sh) as the external signer. This setup enables the use of hardware wallets during the deployment.
 The Beacon Chain Deposit Contract address is `0x00000000219ab540356cBB839Cbe05303d7705Fa` and can be verified in different sources:
@@ -360,4 +365,9 @@ The Beacon Chain Deposit Contract address is `0x00000000219ab540356cBB839Cbe0530
 
 ```shell
 npx hardhat batch-deposit:deploy-via-frame --network mainnet --ethereum-deposit-contract-address 0x00000000219ab540356cBB839Cbe05303d7705Fa
+
+# export the address afterwards: export BATCH_DEPOSIT_CONTRACT_ADDRESS=0x...
+
+# Verify the contract
+npm run verify -- --network holesky $BATCH_DEPOSIT_CONTRACT_ADDRESS "0x00000000219ab540356cBB839Cbe05303d7705Fa"
 ```

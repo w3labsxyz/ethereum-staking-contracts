@@ -10,7 +10,8 @@
     "lint:sol": "solhint 'contracts/**/*.sol' 'test/**/*.sol'",
     "lint:ts": "eslint tasks test",
     "analyze": "slither contracts/lib",
-    "fmt": "prettier --write --plugin=prettier-plugin-solidity contracts tasks test"
+    "fmt": "prettier --write --plugin=prettier-plugin-solidity contracts tasks test",
+    "verify": "op run --env-file=\"./.env\" -- hardhat verify"
   },
   "repository": {
     "type": "git",
@@ -36,6 +37,7 @@
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^3.0.0",
+    "@nomicfoundation/hardhat-verify": "^2.0.4",
     "@openzeppelin/test-helpers": "^0.5.16",
     "@types/dotenv": "^8.2.0",
     "@typescript-eslint/eslint-plugin": "^6.6.0",
