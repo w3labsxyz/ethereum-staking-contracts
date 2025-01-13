@@ -172,7 +172,7 @@ In addition to the previously mentioned requirements, you will need the followin
 ###### Launch a local ethereum network
 
 ```shell
-kurtosis run --enclave w3labs-contracts config/localnet/main.star "$(cat ./config/localnet/params.json)"
+just localnet-start
 ```
 
 Please note that you will need to wait 20 seconds until genesis.
@@ -196,17 +196,11 @@ Prefunded accounts use the following private keys ([source](https://github.com/e
 
 ###### Deploying
 
-Find the rpc port of your locally running execution client by running
+Deploy the contracts to the local network:
 
 ```shell
-npx hardhat update-rpc-port
-# Remember to source the env
-source .env
+npx hardhat batch-deposit:deploy --network localnet --ethereum-deposit-contract-address 0x4242424242424242424242424242424242424242
 ```
-
-This command updates the local environment (`.env`) used for the `networks.localnet` configuration in [./hardhat.config.ts](/hardhat.config.ts) to use this port.
-
-You can now deploy and interact with the contracts.
 
 ###### Interacting
 
@@ -223,7 +217,7 @@ export WITHDRAWAL_ADDRESS=0x8943545177806ED17B9F23F0a21ee5948eCaa776
 export ETHDO_CONFIG_WALLET="Development"
 export ETHDO_CONFIG_PASSPHRASE=test
 export ETHDO_CONFIG_MNEMONIC="flee title shaft evoke stable vote injury ten strong farm obtain pause record rural device cotton hollow echo good acquire scrub buzz vacant liar"
-export ETHDO_CONFIG_WITHDRAWAL_ADDRESS=$JF_STAKING_REWARDS_CONTRACT_ADDRESS
+export ETHDO_CONFIG_WITHDRAWAL_ADDRESS=$WITHDRAWAL_ADDRESS
 
 ethdo wallet create --wallet="${ETHDO_CONFIG_WALLET}" --type="hd" --wallet-passphrase="${ETHDO_CONFIG_PASSPHRASE}" --mnemonic="${ETHDO_CONFIG_MNEMONIC}" --allow-weak-passphrases
 
@@ -255,7 +249,9 @@ You can now extract the respective depositdata from the created depositdata file
 ```shell
 # deploy the BatchDeposit contract
 npx hardhat batch-deposit:deploy --network localnet --ethereum-deposit-contract-address 0x4242424242424242424242424242424242424242
-# export the address afterwards: export BATCH_DEPOSIT_CONTRACT_ADDRESS=0x...
+
+# export the address afterwards:
+export BATCH_DEPOSIT_CONTRACT_ADDRESS=0xb4B46bdAA835F8E4b4d8e208B6559cD267851051
 
 # register valiadtors as available
 npx hardhat batch-deposit:register-validators --network localnet --batch-deposit-contract-address $BATCH_DEPOSIT_CONTRACT_ADDRESS --validator-public-keys "0x8e1b5d5d2938c6ae35445875f5a6410d8a8f6b93b486ee795632ef1cc9329849e91098a4d86108199ea9f017a4f57ce3,0x8c35be170b4741be1314e22d46e0a8ddca9d08c182bcd9f37e85a1fd1ea0d37dbcf972e13a86f2ba369066d098140694,0xb8c4b28d46a73aa82c400b7f159645b097953d37e2ca98908bc236b5b6292a6ba3a0612e8454867a3f9f38a1c8184d0f"
@@ -294,7 +290,7 @@ ls /tmp/local-validator-*.json | xargs -I {} jq -r '.[0].pubkey' {}
 You can stream the logs of these validator nodes with:
 
 ```shell
-docker logs -f $(docker ps | grep w3labs-lighthouse-validator | awk '{print $1}' | tr -d '\n')
+docker logs -f $(docker ps | grep prysm-validator | awk '{print $1}' | tr -d '\n')
 ```
 
 This is especially helpful for observing validators become active upon using `BatchDepoit.sol`.

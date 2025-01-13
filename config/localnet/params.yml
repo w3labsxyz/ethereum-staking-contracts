@@ -1,0 +1,39 @@
+participants:
+  - el_type: geth
+    cl_type: prysm
+    count: 3
+
+network_params:
+  preset: minimal
+  network: kurtosis
+  network_id: "1337"
+  deposit_contract_address: "0x4242424242424242424242424242424242424242"
+  preregistered_validator_keys_mnemonic:
+    "giant issue aisle success illegal bike spike
+    question tent bar rely arctic volcano long crawl hungry vocal artwork sniff fantasy
+    very lucky have athlete"
+
+global_log_level: info
+
+port_publisher:
+  cl:
+    enabled: true
+    public_port_start: 33000
+  el:
+    enabled: true
+    public_port_start: 34000
+  additional_services:
+    enabled: true
+    public_port_start: 36000
+
+additional_services:
+  - blockscout
+  - dora
+  - tx_spammer
+
+tx_spammer_params:
+  tx_spammer_extra_args:
+    - --accounts
+    - "10"
+    - --txcount
+    - "1"

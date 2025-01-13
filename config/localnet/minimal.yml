@@ -1,0 +1,36 @@
+participants:
+  - el_type: erigon
+    cl_type: nimbus
+    cl_image: ethpandaops/nimbus-eth2:unstable-minimal
+    count: 1
+
+network_params:
+  preset: minimal
+  network: kurtosis
+  network_id: "1337"
+  deposit_contract_address: "0x4242424242424242424242424242424242424242"
+
+global_log_level: error
+
+port_publisher:
+  cl:
+    enabled: true
+    public_port_start: 33000
+  el:
+    enabled: true
+    public_port_start: 34000
+  additional_services:
+    enabled: true
+    public_port_start: 36000
+
+additional_services:
+  - blockscout
+  - dora
+  - tx_spammer
+
+tx_spammer_params:
+  tx_spammer_extra_args:
+    - --accounts
+    - "10"
+    - --txcount
+    - "1"
