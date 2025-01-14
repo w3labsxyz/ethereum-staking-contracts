@@ -7,7 +7,7 @@ task(
   "generate-typescript-abi",
   "Generates a TypeScript ABI definition",
 ).setAction(async () => {
-  const contractName = "BatchDeposit";
+  const contractNames = ["BatchDeposit", "StakingRewards"];
 
   const artifactsDir = path.join(
     __dirname,
@@ -24,32 +24,34 @@ task(
     process.exit(1);
   }
 
-  const artifactPath = path.join(
-    artifactsDir,
-    `${contractName}.sol`,
-    `${contractName}.json`,
-  );
+  contractNames.forEach((contractName) => {
+    const artifactPath = path.join(
+      artifactsDir,
+      `${contractName}.sol`,
+      `${contractName}.json`,
+    );
 
-  const outputDir = path.join(__dirname, "..", "dist");
-  const outputPath = path.join(outputDir, "abi.ts");
+    const outputDir = path.join(__dirname, "..", "dist");
+    const outputPath = path.join(outputDir, `${contractName}.abi.ts`);
 
-  if (!fs.existsSync(outputDir)) {
-    fs.mkdirSync(outputDir, { recursive: true });
-  }
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true });
+    }
 
-  const artifact = JSON.parse(fs.readFileSync(artifactPath, "utf8"));
+    const artifact = JSON.parse(fs.readFileSync(artifactPath, "utf8"));
 
-  const { abi } = artifact;
+    const { abi } = artifact;
 
-  const tsContent = `export const abi = ${JSON.stringify(
-    abi,
-    null,
-    2,
-  )} as const;`;
+    const tsContent = `export const abi = ${JSON.stringify(
+      abi,
+      null,
+      2,
+    )} as const;`;
 
-  fs.writeFileSync(outputPath, tsContent);
+    fs.writeFileSync(outputPath, tsContent);
 
-  console.log(
-    `The ABI for ${contractName} has been exported to ${outputPath}.`,
-  );
+    console.log(
+      `The ABI for ${contractName} has been exported to ${outputPath}.`,
+    );
+  });
 });

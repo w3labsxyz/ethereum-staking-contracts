@@ -13,9 +13,6 @@ task("native-staking:deposit", "Deposits funds directly into the Eth2 contract")
     const rawData = fs.readFileSync(depositDataPath, "utf8");
     const depositData = JSON.parse(rawData);
 
-    // Get the signer
-    const [signer] = await ethers.getSigners();
-
     const ethereumDepositContract = await ethers.getContractAt(
       "DepositContract",
       ethereumDepositContractAddress,

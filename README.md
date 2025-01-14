@@ -52,7 +52,19 @@ Given the described separation between the consensus and execution layers in Eth
 
 This design decision is a pragmatic response to the inherent limitations and architectural design of the Ethereum network. It effectively addresses the disconnect between validator exit processes and smart contract execution, ensuring that the `StakingRewards` contract functions accurately and efficiently within these constraints. Simultaneously, it underscores the importance of stakeholder engagement and responsibility to ensure a consistent state and the correct allocation of rewards and fees.
 
+We are implementing the [EIP-1822 UUPS standard](https://eips.ethereum.org/EIPS/eip-1822), following the recommended best-practice of separating variables from logic by using inheritance for subsequent contract versions.
+
+Specifically, we use the [EIP-1967 Proxy](https://eips.ethereum.org/EIPS/eip-1967) implementation of OpenZeppelin.
+
 ## Setup
+
+We are using foundry as the primary development toolkit for this project. Follow [the foundry documentation to set it up](https://book.getfoundry.sh/getting-started/installation). The following tools are used in this project:
+
+- [Forge](https://github.com/foundry-rs/foundry): compile, test, fuzz, format, and deploy smart
+  contracts
+- [Forge Std](https://github.com/foundry-rs/forge-std): collection of helpful contracts and utilities for testing
+- [Prettier](https://github.com/prettier/prettier): code formatter for non-Solidity files
+- [Solhint](https://github.com/protofire/solhint): linter for Solidity code
 
 The Justfaring contracts project uses the [Truffle Suite](https://trufflesuite.com/) and [Node.js with `npm`](https://nodejs.org/en) to manage its dependencies.
 
@@ -400,4 +412,71 @@ npm run fmt
 npm run build
 npm run test
 npm run test:coverage:report
+```
+
+# Foundry
+
+**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+
+Foundry consists of:
+
+- **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
+- **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
+- **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
+- **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+
+## Documentation
+
+https://book.getfoundry.sh/
+
+## Usage
+
+### Build
+
+```shell
+$ forge build
+```
+
+### Test
+
+```shell
+$ forge test
+```
+
+### Format
+
+```shell
+$ forge fmt
+```
+
+### Gas Snapshots
+
+```shell
+$ forge snapshot
+```
+
+### Anvil
+
+```shell
+$ anvil
+```
+
+### Deploy
+
+```shell
+$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
+```
+
+### Cast
+
+```shell
+$ cast <subcommand>
+```
+
+### Help
+
+```shell
+$ forge --help
+$ anvil --help
+$ cast --help
 ```

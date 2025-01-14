@@ -12,19 +12,14 @@ import "./tasks/enclave";
 import "./tasks/native-staking";
 
 dotenv.config();
+
 const isTesting = process.env.HARDHAT_TESTING;
-let sources = isTesting ? "./contracts" : "./contracts/lib";
+const sources = isTesting ? "./contracts" : "./contracts/lib";
 
 const etherscanApiKey = process.env.ETHERSCAN_API_KEY;
 
 if (etherscanApiKey === undefined) {
   console.warn("ETHERSCAN_API_KEY environment variable not set.");
-}
-
-if (process.env.EL_RPC_PORT === undefined) {
-  console.warn(
-    "EL_RPC_PORT environment variable not set. Please run `npx hardhat update-rpc-port` to set it.",
-  );
 }
 
 const config: HardhatUserConfig = {
@@ -77,7 +72,7 @@ const config: HardhatUserConfig = {
     },
   },
   paths: {
-    sources: sources,
+    sources,
   },
 };
 

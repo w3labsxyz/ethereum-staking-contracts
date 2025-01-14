@@ -1,5 +1,8 @@
 import { ethers } from "hardhat";
 import { expect } from "chai";
+import utils from "./utils";
+
+const { createValidatorDeposits } = utils;
 
 /**
  * Sets the balance of an address to a specific amount (in Ether)
@@ -573,6 +576,50 @@ describe("StakingRewards", async () => {
       expect(
         await this.stakingRewardsContract.released(this.w3labs.address),
       ).to.equal(ethers.parseEther("0.001"));
+    });
+
+    describe("deposit data registration", async () => {
+      it("supports registration", async function () {
+        const numberOfValidators = 1;
+        const validatorDeposits = createValidatorDeposits(
+          this.stakingRewardsContract.target,
+          numberOfValidators,
+        );
+
+        console.log({
+          validatorDeposits,
+        });
+
+        const res = this.stakingRewardsContract
+          .connect(this.deployer)
+          .registerDepositData(
+            validatorDeposits.pubkeys,
+            validatorDeposits.signatures,
+            validatorDeposits.pubkeys.map(() => 32000000000000000000n),
+          );
+
+        await expect(res).to.emit(
+          this.stakingRewardsContract,
+          "DepositDataRegistered",
+        );
+
+        const validation = await this.stakingRewardsContract
+          .connect(this.deployer)
+          .getDepositData(0);
+
+        console.log({ validation });
+
+        const verification = await this.stakingRewardsContract
+          .connect(this.deployer)
+          .verifyValidatorDepositData(
+            validation[0],
+            validation[2],
+            validation[1],
+            validation[3],
+          );
+
+        console.log({ verification });
+      });
     });
   });
 });

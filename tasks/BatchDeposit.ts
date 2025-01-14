@@ -10,11 +10,11 @@ task(
     "The address of the Ethereum deposit contract",
   )
   .setAction(async ({ ethereumDepositContractAddress }) => {
-    const [_deployer] = await ethers.getSigners();
+    const [deployer] = await ethers.getSigners();
 
     const batchDepositContract = await ethers.deployContract(
       "BatchDeposit",
-      [ethereumDepositContractAddress],
+      [deployer, ethereumDepositContractAddress],
       { value: 0 },
     );
     await batchDepositContract.waitForDeployment();
