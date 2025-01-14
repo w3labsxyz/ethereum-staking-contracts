@@ -1,15 +1,20 @@
-/node_modules
-/build
-/dist
+# Compiler files
+cache/
+out/
 
-node_modules
-.env
+# Ignores development broadcast logs
+!/broadcast
+/broadcast/*/31337/
+/broadcast/**/dry-run/
+
+# Docs
+docs/
+
+# Env
 .env.local
-coverage
-coverage.json
-typechain
-typechain-types
 
-# Hardhat files
-cache
-artifacts
+# Python
+.venv
+
+# Node.js
+node_modules
