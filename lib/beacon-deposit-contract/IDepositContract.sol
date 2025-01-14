@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.28;
+pragma solidity ^0.8.28;
 
-// Original Source:
+// This file has been extracted from the Ethereum 2.0 deposit contract spec:
 // https://github.com/ethereum/consensus-specs/blob/dev/solidity_deposit_contract/deposit_contract.sol
 
 // This interface is designed to be compatible with the Vyper version.

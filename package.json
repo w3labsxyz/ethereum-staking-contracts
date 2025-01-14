@@ -1,18 +1,16 @@
 {
   "name": "@w3labsxyz/ethereum-staking-contracts",
   "version": "0.1.0",
-  "description": "Smart contracts powering the w3.labs staking platform.",
+  "description": "Smart contracts for Ethereum Staking with w3.labs.",
   "main": "none",
   "scripts": {
-    "test": "HARDHAT_TESTING=true npx hardhat test",
-    "test:coverage": "HARDHAT_TESTING=true npx hardhat coverage",
-    "test:localnet": "HARDHAT_TESTING=true npx hardhat --network localnet test",
-    "lint:sol": "solhint 'contracts/**/*.sol' 'test/**/*.sol'",
-    "lint:ts": "eslint tasks test",
     "analyze": "slither contracts/lib",
-    "fmt": "prettier --write --plugin=prettier-plugin-solidity contracts tasks test",
-    "compile": "hardhat compile",
-    "verify": "op run --env-file=\"./.env\" -- hardhat verify"
+    "lint": "forge fmt --check && solhint \"{script,src,tests}/**/*.sol\"",
+    "fmt": "forge fmt",
+    "build": "forge build",
+    "test": "forge test",
+    "test:coverage": "forge coverage",
+    "test:coverage:report": "forge coverage --report lcov && genhtml lcov.info --branch-coverage --output-dir coverage"
   },
   "repository": {
     "type": "git",
@@ -29,30 +27,7 @@
     "url": "https://github.com/w3labsxyz/ethereum-staking-contracts/issues"
   },
   "homepage": "https://github.com/w3labsxyz/ethereum-staking-contracts#readme",
-  "dependencies": {
-    "@openzeppelin/contracts": "^5.0.1",
-    "dotenv": "^16.4.5",
-    "ethers": "^6.11.1",
-    "eth-provider": "^0.13.6",
-    "hardhat": "^2.20.1"
-  },
   "devDependencies": {
-    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
-    "@nomicfoundation/hardhat-verify": "^2.0.4",
-    "@openzeppelin/test-helpers": "^0.5.16",
-    "@types/dotenv": "^8.2.0",
-    "@typescript-eslint/eslint-plugin": "^7.1.0",
-    "@typescript-eslint/parser": "^7.1.0",
-    "chai": "^4.4.1",
-    "eslint": "^8.57.0",
-    "eslint-config-airbnb-base": "^15.0.0",
-    "eslint-config-prettier": "^9.1.0",
-    "eslint-plugin-import": "^2.29.1",
-    "prettier": "^3.2.5",
-    "prettier-plugin-solidity": "^1.3.1",
-    "solhint": "^4.1.1",
-    "solidity-coverage": "^0.8.9",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.3.3"
+    "solhint": "5.0.4"
   }
 }

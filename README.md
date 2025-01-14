@@ -367,3 +367,37 @@ npx hardhat batch-deposit:deploy-via-frame --network mainnet --ethereum-deposit-
 # Verify the contract
 npm run verify -- --network mainnet $BATCH_DEPOSIT_CONTRACT_ADDRESS "0x00000000219ab540356cBB839Cbe05303d7705Fa"
 ```
+
+## Development
+
+- [Forge](https://github.com/foundry-rs/foundry/blob/master/forge): compile, test, fuzz, format, and deploy smart
+  contracts
+- We use git submodules for managing dependencies
+- [Forge Std](https://github.com/foundry-rs/forge-std): collection of helpful contracts and utilities for testing
+- [Prettier](https://github.com/prettier/prettier): code formatter for non-Solidity files
+- [Solhint](https://github.com/protofire/solhint): linter for Solidity code
+
+Dependencies:
+
+```shell
+# For our contracts
+solc-select install 0.8.28
+# For the consensus-specs deposit contract
+solc-select install 0.6.11
+```
+
+Node.js is used for solhint
+
+```shell
+npm install
+npm run lint
+```
+
+For convenience, other forge commands are also available via package scripts:
+
+```shell
+npm run fmt
+npm run build
+npm run test
+npm run test:coverage:report
+```
