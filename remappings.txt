@@ -1,4 +1,4 @@
-forge-std/=lib/forge-std/
+forge-std/=lib/forge-std/src/
 @openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/
 @ethereum/consensus-specs/=lib/consensus-specs/
 @ethereum/beacon-deposit-contract/=lib/beacon-deposit-contract/

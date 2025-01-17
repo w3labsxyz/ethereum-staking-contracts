@@ -1,7 +1,7 @@
 [profile.default]
 auto_detect_solc = false
 bytecode_hash = "none"
-evm_version = "shanghai"
+evm_version = "cancun"
 fuzz = { runs = 1_000 }
 gas_reports = ["*"]
 optimizer = true
