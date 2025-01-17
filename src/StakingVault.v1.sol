@@ -3,8 +3,8 @@ pragma solidity 0.8.28;
 
 import "./StakingVault.v0.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/utils/Bytes.sol";
 import "@ethereum/beacon-deposit-contract/IDepositContract.sol";
+import {BeaconChain} from "./BeaconChain.sol";
 
 /**
  * @title StakingVault
@@ -26,16 +26,6 @@ import "@ethereum/beacon-deposit-contract/IDepositContract.sol";
  * {release} function.
  */
 contract StakingVaultV1 is StakingVaultV0 {
-    /*
-     * General constants
-     */
-
-    /// @dev The byte-length of validator public keys
-    uint256 private constant PUBKEY_LENGTH = 48;
-
-    /// @dev The byte-length of validator signatures
-    uint256 private constant SIGNATURE_LENGTH = 96;
-
     /*
      * Errors
      */
@@ -160,10 +150,10 @@ contract StakingVaultV1 is StakingVaultV0 {
 
         unchecked {
             for (uint16 i = 0; i < numberOfDepositData; ) {
-                if (pubkeys[i].length != PUBKEY_LENGTH) {
+                if (pubkeys[i].length != BeaconChain.PUBKEY_LENGTH) {
                     revert PublicKeyLengthMismatch();
                 }
-                if (signatures[i].length != SIGNATURE_LENGTH) {
+                if (signatures[i].length != BeaconChain.SIGNATURE_LENGTH) {
                     revert SignatureLengthMismatch();
                 }
                 // if deposit value is not equal to 32 ether
@@ -193,76 +183,6 @@ contract StakingVaultV1 is StakingVaultV0 {
     /// @notice Get the approved stake quota
     function stakeQuota() external view returns (uint256) {
         return _stakeQuota;
-    }
-
-    /// @dev Calculate the deposit data root based on partial deposit data
-    /// The implementation has been adapted from the Ethereum 2.0 specification:
-    /// https://github.com/ethereum/consensus-specs/blob/dev/solidity_deposit_contract/deposit_contract.sol#L128-L137
-    ///
-    /// @param pubkey The BLS12-381 public key of the validator
-    /// @param withdrawalCredentials The withdrawal credentials of the validator
-    /// @param signature The BLS12-381 signature of the deposit message
-    function _depositDataRoot(
-        bytes memory pubkey,
-        bytes memory withdrawalCredentials,
-        bytes memory signature,
-        uint256 depositAmountInWei
-    ) internal pure returns (bytes32) {
-        // Check deposit amount: The deposit value must be a multiple of gwei
-        if (depositAmountInWei % 1 gwei == 0) revert InvalidDepositAmount();
-
-        uint depositAmountInGwei = depositAmountInWei / 1 gwei;
-        // The deposit value must not exceed the maximum uint64 value
-        if (depositAmountInGwei <= type(uint64).max)
-            revert InvalidDepositAmount();
-
-        bytes memory depositAmount = _to_little_endian_64(
-            uint64(depositAmountInGwei)
-        );
-        bytes32 pubkeyRoot = sha256(abi.encodePacked(pubkey, bytes16(0)));
-        bytes32 signatureRoot = sha256(
-            abi.encodePacked(
-                sha256(Bytes.slice(signature, 0, 64)),
-                sha256(
-                    abi.encodePacked(
-                        Bytes.slice(signature, 64, SIGNATURE_LENGTH - 64),
-                        bytes32(0)
-                    )
-                )
-            )
-        );
-        return
-            sha256(
-                abi.encodePacked(
-                    sha256(abi.encodePacked(pubkeyRoot, withdrawalCredentials)),
-                    sha256(
-                        abi.encodePacked(
-                            depositAmount,
-                            bytes24(0),
-                            signatureRoot
-                        )
-                    )
-                )
-            );
-    }
-
-    /// @dev Convert a uint64 value to a little-endian byte array
-    /// Implementation adapted from the Ethereum 2.0 specification:
-    /// https://github.com/ethereum/consensus-specs/blob/dev/solidity_deposit_contract/deposit_contract.sol#L165-L177
-    function _to_little_endian_64(
-        uint64 value
-    ) internal pure returns (bytes memory ret) {
-        ret = new bytes(8);
-        bytes8 bytesValue = bytes8(value);
-        // Byteswapping during copying to bytes.
-        ret[0] = bytesValue[7];
-        ret[1] = bytesValue[6];
-        ret[2] = bytesValue[5];
-        ret[3] = bytesValue[4];
-        ret[4] = bytesValue[3];
-        ret[5] = bytesValue[2];
-        ret[6] = bytesValue[1];
-        ret[7] = bytesValue[0];
     }
 
     /// @dev The error raised when the stake quota is too low
@@ -302,7 +222,7 @@ contract StakingVaultV1 is StakingVaultV0 {
                 pubkey: storedDepositData.pubkey,
                 withdrawalCredentials: withdrawalCredentials,
                 signature: storedDepositData.signature,
-                depositDataRoot: _depositDataRoot(
+                depositDataRoot: BeaconChain.depositDataRoot(
                     storedDepositData.pubkey,
                     withdrawalCredentials,
                     storedDepositData.signature,
@@ -369,7 +289,7 @@ contract StakingVaultV1 is StakingVaultV0 {
                 storedDepositData.pubkey,
                 withdrawalCredentials,
                 storedDepositData.signature,
-                _depositDataRoot(
+                BeaconChain.depositDataRoot(
                     storedDepositData.pubkey,
                     withdrawalCredentials,
                     storedDepositData.signature,

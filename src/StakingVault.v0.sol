@@ -6,6 +6,11 @@ import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/acce
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {IDepositContract} from "@ethereum/beacon-deposit-contract/IDepositContract.sol";
 
+/// @title StakingVault V0
+/// @notice This is the base layer of our StakingVault contract, implementing
+/// access control and the UUPS (EIP-1822).
+/// The actual staking concerns are implemented in inheriting contracts.
+///
 /// @custom:security-contact security@w3labs.xyz
 contract StakingVaultV0 is
     Initializable,
@@ -79,9 +84,8 @@ contract StakingVaultV0 is
         _staker = newStaker;
         _grantRole(STAKER_ROLE, _staker);
 
-        if (newFeeBasisPoints > MAX_BASIS_POINTS) {
+        if (newFeeBasisPoints > MAX_BASIS_POINTS)
             revert InvalidFeeBasisPoints(newFeeBasisPoints);
-        }
         _feeBasisPoints = newFeeBasisPoints;
 
         if (block.chainid == 1) {
@@ -101,6 +105,7 @@ contract StakingVaultV0 is
     }
 
     /// @notice Authorizes that upgrades via `upgradeToAndCall` can only be done by the staker
+    /// @dev Implementation provided for the requirement of the `UUPSUpgradeable` interface
     function _authorizeUpgrade(
         address newImplementation
     ) internal override onlyRole(STAKER_ROLE) {}
@@ -109,7 +114,7 @@ contract StakingVaultV0 is
      * Administrative functions
      */
 
-    /// @dev Update the address of the operator
+    /// @notice Update the address of the operator
     function setOperator(
         address payable newOperator
     ) public onlyRole(OPERATOR_ROLE) {
@@ -118,7 +123,7 @@ contract StakingVaultV0 is
         _operator = newOperator;
     }
 
-    /// @dev Update the address of the fee recipient
+    /// @notice Update the address of the fee recipient
     function setFeeRecipient(
         address payable newFeeRecipient
     ) public onlyRole(OPERATOR_ROLE) {
@@ -129,27 +134,27 @@ contract StakingVaultV0 is
      * Public views on the internal state
      */
 
-    /// @dev Get the address of the operator
+    /// @notice Get the address of the operator
     function operator() public view returns (address) {
         return _operator;
     }
 
-    /// @dev Get the address of the fee recipient
+    /// @notice Get the address of the fee recipient
     function feeRecipient() public view returns (address) {
         return _feeRecipient;
     }
 
-    /// @dev Get the address of the staker
+    /// @notice Get the address of the staker
     function staker() public view returns (address) {
         return _staker;
     }
 
-    /// @dev Get the fee basis points
+    /// @notice Get the fee basis points
     function feeBasisPoints() public view returns (uint256) {
         return _feeBasisPoints;
     }
 
-    /// @dev Get the address of the beacon chain deposit contract
+    /// @notice Get the address of the beacon chain deposit contract
     function depositContractAddress() public view returns (IDepositContract) {
         return _depositContractAddress;
     }
