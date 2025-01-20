@@ -24,7 +24,13 @@ contract StakingVaultV0Test is Test {
         staker = payable(address(0x03));
         feeBasisPoints = 1000;
 
-        depositContract = new DepositContract();
+        // Deploy the native Ethereum Deposit Contract to
+        // the commonly used address 0x4242424242424242424242424242424242424242
+        address dci = address(new DepositContract());
+        vm.etch(address(0x4242424242424242424242424242424242424242), dci.code);
+        depositContract = IDepositContract(
+            address(0x4242424242424242424242424242424242424242)
+        );
 
         stakingVault = new StakingVaultV0();
 
@@ -32,8 +38,7 @@ contract StakingVaultV0Test is Test {
             stakingVault,
             operator,
             feeRecipient,
-            feeBasisPoints,
-            depositContract
+            feeBasisPoints
         );
     }
 

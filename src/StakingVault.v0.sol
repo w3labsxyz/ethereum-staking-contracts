@@ -70,8 +70,7 @@ contract StakingVaultV0 is
         address payable newOperator,
         address payable newFeeRecipient,
         address payable newStaker,
-        uint256 newFeeBasisPoints,
-        IDepositContract newDepositContractAddress
+        uint256 newFeeBasisPoints
     ) public initializer {
         __AccessControl_init();
         __UUPSUpgradeable_init();
@@ -93,14 +92,12 @@ contract StakingVaultV0 is
                 // https://etherscan.io/address/0x00000000219ab540356cbb839cbe05303d7705fa
                 0x00000000219ab540356cBB839Cbe05303d7705Fa
             );
-        } else if (block.chainid == 17_000) {
+        } else {
             _depositContractAddress = IDepositContract(
+                // For other networks, such as those used in testing, we use the supplied address
                 // https://holesky.etherscan.io/address/0x4242424242424242424242424242424242424242
                 0x4242424242424242424242424242424242424242
             );
-        } else {
-            // For other networks, such as those used in testing, we use the supplied address
-            _depositContractAddress = newDepositContractAddress;
         }
     }
 

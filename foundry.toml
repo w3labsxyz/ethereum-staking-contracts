@@ -13,6 +13,7 @@ src = "src"
 test = "tests"
 libs = ["lib"]
 fs_permissions = [{ access = "read", path = "./tests/fixtures" }]
+ffi = true
 
 [profile.ci]
 fuzz = { runs = 10_000 }

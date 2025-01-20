@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
-import { StakingVaultV0 } from "./StakingVault.v0.sol";
-import { IDepositContract } from "@ethereum/beacon-deposit-contract/IDepositContract.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {StakingVaultV0} from "./StakingVault.v0.sol";
 
 contract StakingVaultFactory is Ownable {
     /// @dev The address of the StakingVault implementation contract
@@ -21,10 +20,6 @@ contract StakingVaultFactory is Ownable {
 
     /// @dev The default fee basis points used for new vaults
     uint256 private _defaultFeeBasisPoints;
-
-    /// @dev The default address of the beacon chain deposit contract
-    /// See: https://eips.ethereum.org/EIPS/eip-2982#parameters
-    IDepositContract private immutable _defaultDepositContractAddress;
 
     /// @dev An error raised when a user tries to create multiple vaults
     error OneVaultPerAddress();
@@ -44,11 +39,8 @@ contract StakingVaultFactory is Ownable {
         StakingVaultV0 newStakingVault,
         address payable newOperator,
         address payable newFeeRecipient,
-        uint256 newFeeBasisPoints,
-        IDepositContract newDepositContractAddress
-    )
-        Ownable(msg.sender)
-    {
+        uint256 newFeeBasisPoints
+    ) Ownable(msg.sender) {
         if (address(newStakingVault) == address(0)) {
             revert ImplementationZeroAddress();
         }
@@ -59,7 +51,6 @@ contract StakingVaultFactory is Ownable {
         _defaultOperator = newOperator;
         _defaultFeeRecipient = newFeeRecipient;
         _defaultFeeBasisPoints = newFeeBasisPoints;
-        _defaultDepositContractAddress = newDepositContractAddress;
     }
 
     /// @notice Create a new proxy to the StakingVault
@@ -73,8 +64,7 @@ contract StakingVaultFactory is Ownable {
                 _defaultOperator,
                 _defaultFeeRecipient,
                 msg.sender,
-                _defaultFeeBasisPoints,
-                _defaultDepositContractAddress
+                _defaultFeeBasisPoints
             )
         );
 
@@ -95,7 +85,9 @@ contract StakingVaultFactory is Ownable {
     }
 
     /// @notice Get the address of the StakingVault of a specific owner
-    function vaultForAddress(address staker) public view returns (StakingVaultV0) {
+    function vaultForAddress(
+        address staker
+    ) public view returns (StakingVaultV0) {
         return _vaultsByOwner[staker];
     }
 
@@ -119,12 +111,16 @@ contract StakingVaultFactory is Ownable {
      */
 
     /// @notice Update the address of the default operator
-    function setDefaultOperator(address payable newOperator) external onlyOwner {
+    function setDefaultOperator(
+        address payable newOperator
+    ) external onlyOwner {
         _defaultOperator = newOperator;
     }
 
     /// @notice Update the address of the default fee recipient
-    function setDefaultFeeRecipient(address payable newFeeRecipient) external onlyOwner {
+    function setDefaultFeeRecipient(
+        address payable newFeeRecipient
+    ) external onlyOwner {
         _defaultFeeRecipient = newFeeRecipient;
     }
 }

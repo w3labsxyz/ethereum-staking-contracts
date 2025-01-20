@@ -100,7 +100,7 @@ contract StakingVaultV1 is StakingVaultV0 {
         );
 
         for (uint16 i = 0; i < numberOfDeposits; i++) {
-            _depositData[i] = PartialDepositData({
+            _depositData[i] = StoredDepositData({
                 // We are using non-zero values to initialize the fields
                 // in order to actually allocate the storage slots
                 pubkey_1: bytes32(uint256(1)),
@@ -115,14 +115,12 @@ contract StakingVaultV1 is StakingVaultV0 {
         emit RequestedStakeQuota(_requestedStakeQuota);
     }
 
-    PartialDepositData[] private _partialDepositData;
-
-    /// @dev The structure of partial deposit data
+    /// @dev The structure of stored, i.e., partial deposit data
     /// @dev To save gas, we chunk the 48 bytes public keys and 96 bytes signatures into 32 bytes pieces.
+    /// @dev To save gas, the assumption is that the deposit value is always MAX_EFFECTIVE_BALANCE
     /// @param pubkey The BLS12-381 public key of the validator
     /// @param signature The BLS12-381 signature of the deposit message
-    /// @param depositValue The deposit value of the validator
-    struct PartialDepositData {
+    struct StoredDepositData {
         bytes32 pubkey_1;
         bytes32 pubkey_2;
         bytes32 signature_1;
@@ -136,7 +134,7 @@ contract StakingVaultV1 is StakingVaultV0 {
     /// @param depositValue The deposit value of the validator
     struct DepositData {
         bytes pubkey;
-        bytes withdrawalCredentials;
+        bytes32 withdrawalCredentials;
         bytes signature;
         bytes32 depositDataRoot;
         uint256 depositValue;
@@ -145,12 +143,17 @@ contract StakingVaultV1 is StakingVaultV0 {
     /// @dev The total number of deposit data in the _depositData mapping
     uint16 private _depositDataCount;
 
-    /// @dev The next index of the deposit data to be processed
-    uint16 private _depositDataIndex;
+    /// @dev The total number of deposits that were exercised by the staker
+    /// This number is also the next index of the deposit data to be processed
+    uint16 private _numberOfDeposits;
+
+    /// @dev The total number of unbondings that were requested by the staker
+    /// This number is also the next index of the unbonding data to be processed
+    uint16 private _numberOfUnbondings;
 
     /// @dev Indexed map of deposit data. Supports a maximum of 2^16 - 1 deposit data,
     /// i.e., 65535 * 32 Ether
-    mapping(uint16 => PartialDepositData) private _depositData;
+    mapping(uint16 => StoredDepositData) private _depositData;
 
     /// @notice Approve a quota to be staked in this vault by registering the
     /// respective deposit data. Only callable by the operator.
@@ -187,9 +190,12 @@ contract StakingVaultV1 is StakingVaultV0 {
 
             // TODO: Check pubkey is not already exited
 
-            PartialDepositData storage pdd = _depositData[
-                _depositDataCount + i
-            ];
+            // TODO: Validate that the validator has never been "used" before
+
+            if (_principalPerValidator[pubkeys[i]] != 0)
+                revert ValidatorAlreadyActive();
+
+            StoredDepositData storage pdd = _depositData[_depositDataCount + i];
             pdd.pubkey_1 = bytes32(pubkeys[i][:32]);
             pdd.pubkey_2 = bytes32(pubkeys[i][32:48]);
             pdd.signature_1 = bytes32(signatures[i][:32]);
@@ -215,6 +221,9 @@ contract StakingVaultV1 is StakingVaultV0 {
     /// @dev The error raised when the stake quota is too low
     error StakeQuotaTooLow();
 
+    /// @dev The error raised when the validator is already active
+    error ValidatorAlreadyActive();
+
     /// @notice Get the next deposit data for a given amount of stake
     /// Reverts if newStake exceeds the stakeQuota
     ///
@@ -231,14 +240,14 @@ contract StakingVaultV1 is StakingVaultV0 {
         );
 
         // Construct 0x01 withdrawal credentials using the address of this staking vault
-        bytes memory withdrawalCredentials = _withdrawalCredentials();
+        bytes32 withdrawalCredentials = _withdrawalCredentials();
         DepositData[] memory tempDepositData = new DepositData[](
             numberOfDeposits
         );
 
         for (uint16 i = 0; i < numberOfDeposits; i++) {
-            PartialDepositData storage storedDepositData = _depositData[
-                _depositDataIndex + i
+            StoredDepositData storage storedDepositData = _depositData[
+                _numberOfDeposits + i
             ];
 
             bytes memory pubkey = bytes.concat(
@@ -250,8 +259,6 @@ contract StakingVaultV1 is StakingVaultV0 {
                 storedDepositData.signature_2,
                 storedDepositData.signature_3
             );
-
-            // TODO: Validate that the validator is not exiting or exited
 
             tempDepositData[i] = DepositData({
                 pubkey: pubkey,
@@ -271,10 +278,13 @@ contract StakingVaultV1 is StakingVaultV0 {
     }
 
     /// @dev Balance per validator (identified by public key)
-    mapping(bytes => uint256) private _stakedBalances;
+    mapping(bytes => uint256) private _principalPerValidator;
 
-    /// @dev The active staked balance
-    uint256 private _stakedBalance = 0;
+    /// @dev The amount of Ether actively staked
+    uint256 private _principalAtStake = 0;
+
+    /// @dev The amount of Ether exited from staking
+    uint256 private _principalExited;
 
     /// @notice By sending Ether to this contract, the sender is staking the funds
     ///
@@ -294,15 +304,15 @@ contract StakingVaultV1 is StakingVaultV0 {
         ) revert InvalidDepositAmount();
 
         // Construct 0x01 withdrawal credentials using the address of this staking vault
-        bytes memory withdrawalCredentials = _withdrawalCredentials();
+        bytes32 withdrawalCredentials = _withdrawalCredentials();
 
         uint16 numberOfDeposits = uint16(
             msg.value / BeaconChain.MAX_EFFECTIVE_BALANCE
         );
 
         for (uint16 i = 0; i < numberOfDeposits; i++) {
-            PartialDepositData storage storedDepositData = _depositData[
-                _depositDataIndex + i
+            StoredDepositData storage storedDepositData = _depositData[
+                _numberOfDeposits + i
             ];
 
             // TODO: Validate validator is not exited
@@ -322,7 +332,7 @@ contract StakingVaultV1 is StakingVaultV0 {
                 value: BeaconChain.MAX_EFFECTIVE_BALANCE
             }(
                 pubkey,
-                withdrawalCredentials,
+                abi.encodePacked(withdrawalCredentials),
                 signature,
                 BeaconChain.depositDataRoot(
                     pubkey,
@@ -333,14 +343,11 @@ contract StakingVaultV1 is StakingVaultV0 {
             );
 
             _stakeQuota -= BeaconChain.MAX_EFFECTIVE_BALANCE;
-            _stakedBalance += BeaconChain.MAX_EFFECTIVE_BALANCE;
-            // _stakedBalances[pubkey] += BeaconChain.MAX_EFFECTIVE_BALANCE;
-            // We delete the deposit data as they will not be used again and
-            // deleting them provides a gas refund
-            // delete _depositData[_depositDataIndex];
+            _principalAtStake += BeaconChain.MAX_EFFECTIVE_BALANCE;
+            _principalPerValidator[pubkey] += BeaconChain.MAX_EFFECTIVE_BALANCE;
         }
 
-        _depositDataIndex += numberOfDeposits;
+        _numberOfDeposits += numberOfDeposits;
     }
 
     /// @notice Get the withdrawal credentials of this staking vault
@@ -349,64 +356,83 @@ contract StakingVaultV1 is StakingVaultV0 {
     /// validator rewards and withdrawals to itself.
     ///
     /// @return The withdrawal credentials of this staking vault
-    function _withdrawalCredentials() internal view returns (bytes memory) {
-        return
-            abi.encodePacked(bytes1(0x01), bytes11(0), bytes20(address(this)));
+    function _withdrawalCredentials() internal view returns (bytes32) {
+        bytes32 ret = bytes32(
+            bytes.concat(bytes1(0x01), bytes11(0), bytes20(address(this)))
+        );
+        return ret;
     }
 
     /// @dev The event emitted when an unbonding is requested by the staker
-    event UnbondRequested(uint256 amount);
-
-    /// @dev The amount of Ether being unbonded
-    uint256 private _unbondingAmount;
-
-    /// @dev The total amount of Ether exited
-    uint256 private _exitedStake;
+    event UnbondRequested(bytes pubkey);
 
     /// @notice The error raised when the requested amount does not match with validator balances
     error InvalidUnbondAmount();
+
+    /// @notice The error raised when the validator is not active
+    error ValidatorNotActive();
 
     /// @notice Request unbonding of a certain amount of Ether
     /// Only callable by the staker
     /// Reverts if the requested amount does not match with validator balances
     /// @param amount The amount of Ether to unbond
-    function requestUnbond(uint256 amount) external onlyRole(STAKER_ROLE) {
-        if (amount > _stakedBalance) revert InvalidUnbondAmount();
+    function requestUnbonding(uint256 amount) external onlyRole(STAKER_ROLE) {
+        if (
+            amount > _principalAtStake ||
+            amount % BeaconChain.MAX_EFFECTIVE_BALANCE != 0
+        ) revert InvalidUnbondAmount();
 
-        // TODO: if (_stakedBalances[pubkey] == 0) revert ValidatorNotActive();
-        // TODO: Verify the amount can be unbonded by exiting certain validators
+        uint16 numberOfUnbondings = uint16(
+            amount / BeaconChain.MAX_EFFECTIVE_BALANCE
+        );
 
-        _stakedBalance -= amount;
-        _unbondingAmount += amount;
-        _exitedStake += amount;
-        emit UnbondRequested(amount);
+        for (uint16 i = 0; i < numberOfUnbondings; i++) {
+            bytes memory pubkey = bytes.concat(
+                _depositData[_numberOfUnbondings + i].pubkey_1,
+                bytes16(_depositData[_numberOfUnbondings + i].pubkey_2)
+            );
+
+            if (
+                _principalPerValidator[pubkey] !=
+                BeaconChain.MAX_EFFECTIVE_BALANCE
+            ) revert ValidatorNotActive();
+
+            _principalPerValidator[pubkey] = 0;
+            emit UnbondRequested(pubkey);
+        }
+
+        _principalAtStake -= amount;
+        _principalExited += amount;
+        _numberOfUnbondings += numberOfUnbondings;
     }
 
-    /// @notice Trigger the unbond of a certain amount of Ether
-    /// Only callable by the staker
-    /// Implements execution layer triggerable exits via EIP-7002
-    /// Reverts if the requested amount does not match with validator balances
-    /// Reverts if any of the valdiators are not active or exitable
-    /// @param amount The amount of Ether to unbond
-    function unbond(uint256 amount) external onlyRole(STAKER_ROLE) {
-        if (amount > _unbondingAmount) revert InvalidUnbondAmount();
-        _stakedBalance -= amount;
-        _unbondingAmount += amount;
-        _exitedStake += amount;
-        // error ValidatorNotActive();
-        // TODO: Implement
-    }
+    /// @dev The total amount of principal withdrawn
+    uint256 private _principalWithdrawn;
 
-    /// @dev The total amount of rewards released
+    /// @dev The total amount of rewards claimed
     uint256 private _claimedRewards;
-    /// @dev The total amount of fees released
+
+    /// @dev The total amount of fees claimed
     uint256 private _claimedFees;
 
     /// @notice The error raised when there are no funds to release
     error NoFundsToRelease();
 
-    /// @dev Triggers withdrawal of the accumulated rewards to the staker.
-    /// Also releases any unbonded principal, if available
+    /// @notice Triggers withdrawal of unwithdrawn, but unbonded principal
+    /// Only callable by the staker
+    /// Reverts if there is no claimable principal
+    function claimUnbondedPrincipal() external onlyRole(STAKER_ROLE) {
+        uint256 claimable = withdrawablePrincipal();
+
+        if (claimable == 0) revert NoFundsToRelease();
+
+        _principalWithdrawn += claimable;
+
+        emit FundsReleased(_staker, claimable);
+        Address.sendValue(_staker, claimable);
+    }
+
+    /// @notice Triggers withdrawal of the accumulated rewards to the staker.
     /// Only callable by the staker
     /// Reverts if the staker has no claimable rewards
     function claimRewards() external virtual onlyRole(STAKER_ROLE) {
@@ -420,7 +446,7 @@ contract StakingVaultV1 is StakingVaultV0 {
         Address.sendValue(_staker, claimable);
     }
 
-    /// @dev Triggers withdrawal of the acculated fees to the fee recipient
+    /// @notice Triggers withdrawal of the acculated fees to the fee recipient
     /// Only callable by the operator
     /// Reverts if the operator has no claimable fees
     function claimFees() external virtual onlyRole(OPERATOR_ROLE) {
@@ -443,31 +469,35 @@ contract StakingVaultV1 is StakingVaultV0 {
 
     /// @notice Get the amount currently staked
     function stakedBalance() external view returns (uint256) {
-        return _stakedBalance;
+        return _principalAtStake;
     }
 
-    /**
-     * @dev Get the total amount of rewards that can be claimed.
-     */
+    /// @dev Get the total amount of principal that can be withdrawn
+    function withdrawablePrincipal() public view returns (uint256) {
+        return _principalExited - _principalWithdrawn;
+    }
+
+    /// @dev Get the total amount of principal that has been withdrawn
+    function claimedPrincipal() public view returns (uint256) {
+        return _principalWithdrawn;
+    }
+
+    /// @dev Get the total amount of rewards that can be claimed.
     function claimableRewards() public view returns (uint256) {
         uint256 billable = billableRewards();
 
         // 10_000 basis points = 100%
         uint256 totalRewards = (billable * (10_000 - _feeBasisPoints)) /
             10 ** 4;
-        return totalRewards + _exitedStake - _claimedRewards;
+        return totalRewards + _principalExited - _claimedRewards;
     }
 
-    /**
-     * @dev Get the total amount of rewards that have been claimed.
-     */
+    /// @dev Get the total amount of rewards that have been claimed.
     function claimedRewards() public view returns (uint256) {
         return _claimedRewards;
     }
 
-    /**
-     * @dev Get the total amount of fees that can be claimed.
-     */
+    /// @dev Get the total amount of fees that can be claimed.
     function claimableFees() public view returns (uint256) {
         uint256 billable = billableRewards();
 
@@ -477,24 +507,20 @@ contract StakingVaultV1 is StakingVaultV0 {
         return totalFees - _claimedFees;
     }
 
-    /**
-     * @dev Get the total amount of fees paid.
-     */
+    /// @dev Get the total amount of fees paid.
     function claimedFees() public view returns (uint256) {
         return _claimedFees;
     }
 
-    /**
-     * @dev Getter for the billable rewards.
-     */
+    /// @dev Getter for the billable rewards.
     function billableRewards() public view returns (uint256) {
         uint256 totalBalance = address(this).balance +
             _claimedFees +
             _claimedRewards;
         uint256 billable = 0;
 
-        if (totalBalance >= _exitedStake) {
-            billable = totalBalance - _exitedStake;
+        if (totalBalance >= _principalExited) {
+            billable = totalBalance - _principalExited;
         }
 
         return billable;

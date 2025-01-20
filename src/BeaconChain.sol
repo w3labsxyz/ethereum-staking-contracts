@@ -36,7 +36,7 @@ library BeaconChain {
     /// @param signature The BLS12-381 signature of the deposit message
     function depositDataRoot(
         bytes memory pubkey,
-        bytes memory withdrawalCredentials,
+        bytes32 withdrawalCredentials,
         bytes memory signature,
         uint256 depositAmountInWei
     ) internal pure returns (bytes32) {
