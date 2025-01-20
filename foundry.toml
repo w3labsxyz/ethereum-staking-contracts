@@ -12,6 +12,7 @@ solc = "0.8.28"
 src = "src"
 test = "tests"
 libs = ["lib"]
+fs_permissions = [{ access = "read", path = "./tests/fixtures" }]
 
 [profile.ci]
 fuzz = { runs = 10_000 }

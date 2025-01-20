@@ -233,7 +233,7 @@ export ETHDO_CONFIG_WITHDRAWAL_ADDRESS=$WITHDRAWAL_ADDRESS
 
 ethdo wallet create --wallet="${ETHDO_CONFIG_WALLET}" --type="hd" --wallet-passphrase="${ETHDO_CONFIG_PASSPHRASE}" --mnemonic="${ETHDO_CONFIG_MNEMONIC}" --allow-weak-passphrases
 
-for ETHDO_VALIDATOR_INDEX in {0..31}
+for ETHDO_VALIDATOR_INDEX in {1..2}
 do
     ethdo account create --account="${ETHDO_CONFIG_WALLET}/Validators/${ETHDO_VALIDATOR_INDEX}" --wallet-passphrase="${ETHDO_CONFIG_PASSPHRASE}" --passphrase="${ETHDO_CONFIG_PASSPHRASE}" --allow-weak-passphrases --path="m/12381/3600/${ETHDO_VALIDATOR_INDEX}/0/0"
     ethdo validator depositdata --validatoraccount="${ETHDO_CONFIG_WALLET}/Validators/${ETHDO_VALIDATOR_INDEX}" --depositvalue="32Ether" --withdrawaladdress="${ETHDO_CONFIG_WITHDRAWAL_ADDRESS}" --passphrase="${ETHDO_CONFIG_PASSPHRASE}" --forkversion="0x10000038" > /tmp/local-validator-depositdata-${ETHDO_VALIDATOR_INDEX}.json
@@ -480,3 +480,60 @@ $ forge --help
 $ anvil --help
 $ cast --help
 ```
+
+## Use-Cases
+
+```mermaid
+sequenceDiagram
+    actor Staker
+    participant StakingVault Contract
+    participant Beacon Deposit Contract
+    participant Ethereum Network
+    participant Validator
+    actor Node Operator
+
+    Staker->>StakingVault Contract: Initialize
+
+    loop Staking phase
+        Staker->>StakingVault Contract: Request Staking Quota
+        Node Operator->>Validator: Allocate Staking Quota
+        Node Operator->>StakingVault Contract: Register Staking Data
+
+        Staker->>StakingVault Contract: Verify Staking Data
+        Staker->>StakingVault Contract: Send Stake
+        StakingVault Contract->>+Beacon Deposit Contract: Forward Stake
+        Note over Beacon Deposit Contract: Wait for Ethereum Network to activate validator
+	end
+
+    loop Active phase
+        Ethereum Network->>Validator: Request Block Attestations & Signings
+        Validator->>Ethereum Network: Sign and Attest Blocks
+        Ethereum Network->>Validator: Increase Validator Balance with Consensus-Rewards
+        Ethereum Network->>Validator: Withdraw Consensus-Rewards every ~4.5 days
+        Ethereum Network->>StakingVault Contract: Credit Consensus-Rewards every ~4.5 days
+		Ethereum Network->>StakingVault Contract: Send Execution-Rewards for signed Blocks
+
+		Staker->>StakingVault Contract: Claim
+		StakingVault Contract->>Staker: Release Rewards
+
+		Node Operator->>StakingVault Contract: Withdraw Fees
+		StakingVault Contract->>Node Operator: Release Fees
+	end
+
+    Staker->>StakingVault Contract: Request Unstake
+    StakingVault Contract->>+Ethereum Network: Forward Exit Request
+
+    Note over Ethereum Network: Wait for Ethereum Exit Queue
+
+    Validator->>Validator: Stop Validation
+
+    Ethereum Network->>StakingVault Contract: Release Stake & Consensus-Rewards
+
+    Staker->>StakingVault Contract: Claim
+    StakingVault Contract->>Staker: Release Stake & Rewards
+
+    Node Operator->>StakingVault Contract: Withdraw Fees
+    StakingVault Contract->>Node Operator: Release Fees
+```
+
+UUPS comes from ERC-1822, which first documented the pattern.

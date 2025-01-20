@@ -1,0 +1,329 @@
+caller
+push20 0xfffffffffffffffffffffffffffffffffffffffe
+eq
+push1 0xcb
+jumpi
+
+push1 0x11
+push0
+sload
+dup1
+push32 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+eq
+push2 0x01f4
+jumpi
+
+push1 0x01
+dup3
+mul
+push1 0x01
+swap1
+push0
+
+jumpdest
+push0
+dup3
+gt
+iszero
+push1 0x68
+jumpi
+
+dup2
+add
+swap1
+dup4
+mul
+dup5
+dup4
+mul
+swap1
+div
+swap2
+push1 0x01
+add
+swap2
+swap1
+push1 0x4d
+jump
+
+jumpdest
+swap1
+swap4
+swap1
+div
+swap3
+pop
+pop
+pop
+calldatasize
+push1 0x38
+eq
+push1 0x88
+jumpi
+
+calldatasize
+push2 0x01f4
+jumpi
+
+callvalue
+push2 0x01f4
+jumpi
+
+push0
+mstore
+push1 0x20
+push0
+return
+
+jumpdest
+callvalue
+lt
+push2 0x01f4
+jumpi
+
+push1 0x01
+sload
+push1 0x01
+add
+push1 0x01
+sstore
+push1 0x03
+sload
+dup1
+push1 0x03
+mul
+push1 0x04
+add
+caller
+dup2
+sstore
+push1 0x01
+add
+push0
+calldataload
+dup2
+sstore
+push1 0x01
+add
+push1 0x20
+calldataload
+swap1
+sstore
+caller
+push1 0x60
+shl
+push0
+mstore
+push1 0x38
+push0
+push1 0x14
+calldatacopy
+push1 0x4c
+push0
+log0
+push1 0x01
+add
+push1 0x03
+sstore
+stop
+
+jumpdest
+push1 0x03
+sload
+push1 0x02
+sload
+dup1
+dup3
+sub
+dup1
+push1 0x10
+gt
+push1 0xdf
+jumpi
+
+pop
+push1 0x10
+
+jumpdest
+push0
+
+jumpdest
+dup2
+dup2
+eq
+push2 0x0183
+jumpi
+
+dup3
+dup2
+add
+push1 0x03
+mul
+push1 0x04
+add
+dup2
+push1 0x4c
+mul
+dup2
+sload
+push1 0x60
+shl
+dup2
+mstore
+push1 0x14
+add
+dup2
+push1 0x01
+add
+sload
+dup2
+mstore
+push1 0x20
+add
+swap1
+push1 0x02
+add
+sload
+dup1
+push32 0xffffffffffffffffffffffffffffffff00000000000000000000000000000000
+and
+dup3
+mstore
+swap1
+push1 0x10
+add
+swap1
+push1 0x40
+shr
+swap1
+dup2
+push1 0x38
+shr
+dup2
+push1 0x07
+add
+mstore8
+dup2
+push1 0x30
+shr
+dup2
+push1 0x06
+add
+mstore8
+dup2
+push1 0x28
+shr
+dup2
+push1 0x05
+add
+mstore8
+dup2
+push1 0x20
+shr
+dup2
+push1 0x04
+add
+mstore8
+dup2
+push1 0x18
+shr
+dup2
+push1 0x03
+add
+mstore8
+dup2
+push1 0x10
+shr
+dup2
+push1 0x02
+add
+mstore8
+dup2
+push1 0x08
+shr
+dup2
+push1 0x01
+add
+mstore8
+mstore8
+push1 0x01
+add
+push1 0xe1
+jump
+
+jumpdest
+swap2
+add
+dup1
+swap3
+eq
+push2 0x0195
+jumpi
+
+swap1
+push1 0x02
+sstore
+push2 0x01a0
+jump
+
+jumpdest
+swap1
+pop
+push0
+push1 0x02
+sstore
+push0
+push1 0x03
+sstore
+
+jumpdest
+push0
+sload
+dup1
+push32 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+eq
+iszero
+push2 0x01cd
+jumpi
+
+pop
+push0
+
+jumpdest
+push1 0x01
+sload
+push1 0x02
+dup3
+dup3
+add
+gt
+push2 0x01e2
+jumpi
+
+pop
+pop
+push0
+push2 0x01e8
+jump
+
+jumpdest
+add
+push1 0x02
+swap1
+sub
+
+jumpdest
+push0
+sstore
+push0
+push1 0x01
+sstore
+push1 0x4c
+mul
+push0
+return
+
+jumpdest
+push0
+push0
+revert

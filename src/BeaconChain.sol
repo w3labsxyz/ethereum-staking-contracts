@@ -4,6 +4,18 @@ pragma solidity 0.8.28;
 import {Bytes} from "@openzeppelin/contracts/utils/Bytes.sol";
 
 library BeaconChain {
+    // @dev The minimum amount required to activate a validator
+    uint256 public constant MIN_ACTIVATION_BALANCE = 32 ether;
+
+    // @dev The maximum effective balance that a validator can have
+    //
+    // @dev This value will change with EIP-7251, but only when compounding
+    // withdrawal credentials are used. We'll updgrade the contract when
+    // the EIP is merged.
+    //
+    // https://eips.ethereum.org/EIPS/eip-7251
+    uint256 public constant MAX_EFFECTIVE_BALANCE = 32 ether;
+
     /// @dev The byte-length of validator public keys
     uint256 public constant PUBKEY_LENGTH = 48;
 
@@ -16,6 +28,8 @@ library BeaconChain {
     /// @dev Calculate the deposit data root based on partial deposit data
     /// The implementation has been adapted from the Ethereum 2.0 specification:
     /// https://github.com/ethereum/consensus-specs/blob/dev/solidity_deposit_contract/deposit_contract.sol#L128-L137
+    /// We are using the OpenZeppelin Bytes library for slicing because we are not
+    /// handling bytes as calldata but from memory.
     ///
     /// @param pubkey The BLS12-381 public key of the validator
     /// @param withdrawalCredentials The withdrawal credentials of the validator
@@ -27,11 +41,11 @@ library BeaconChain {
         uint256 depositAmountInWei
     ) internal pure returns (bytes32) {
         // Check deposit amount: The deposit value must be a multiple of gwei
-        if (depositAmountInWei % 1 gwei == 0) revert DepositAmountInvalid();
+        if (depositAmountInWei % 1 gwei != 0) revert DepositAmountInvalid();
 
         uint depositAmountInGwei = depositAmountInWei / 1 gwei;
         // The deposit value must not exceed the maximum uint64 value
-        if (depositAmountInGwei <= type(uint64).max)
+        if (depositAmountInGwei > type(uint64).max)
             revert DepositAmountInvalid();
 
         bytes memory depositAmount = _to_little_endian_64(
@@ -40,10 +54,10 @@ library BeaconChain {
         bytes32 pubkeyRoot = sha256(abi.encodePacked(pubkey, bytes16(0)));
         bytes32 signatureRoot = sha256(
             abi.encodePacked(
-                sha256(Bytes.slice(signature, 0, 64)),
+                sha256(abi.encodePacked(Bytes.slice(signature, 0, 64))),
                 sha256(
                     abi.encodePacked(
-                        Bytes.slice(signature, 64, SIGNATURE_LENGTH - 64),
+                        Bytes.slice(signature, 64, SIGNATURE_LENGTH),
                         bytes32(0)
                     )
                 )

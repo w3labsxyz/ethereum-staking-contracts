@@ -70,6 +70,9 @@ contract StakingVaultV1 is StakingVaultV0 {
     /// @dev The error raised when the requested stake quota is less than the current staked balance
     error RequestedStakeQuotaLessThanStakedBalance();
 
+    /// @dev The error raised when the requested stake quota is invalid
+    error RequestedStakeQuotaInvalid();
+
     /// @dev The event emitted when the requested stake quota is updated
     event RequestedStakeQuota(uint256 requestedStakeQuota);
 
@@ -84,22 +87,47 @@ contract StakingVaultV1 is StakingVaultV0 {
     function requestStakeQuota(
         uint256 newRequestedStakeQuota
     ) external onlyRole(STAKER_ROLE) {
-        if (newRequestedStakeQuota <= _requestedStakeQuota) {
+        if (newRequestedStakeQuota <= _requestedStakeQuota)
             revert RequestedStakeQuotaLessThanStakedBalance();
+
+        if (
+            newRequestedStakeQuota < BeaconChain.MAX_EFFECTIVE_BALANCE ||
+            newRequestedStakeQuota % BeaconChain.MAX_EFFECTIVE_BALANCE != 0
+        ) revert RequestedStakeQuotaInvalid();
+
+        uint16 numberOfDeposits = uint16(
+            newRequestedStakeQuota / BeaconChain.MAX_EFFECTIVE_BALANCE
+        );
+
+        for (uint16 i = 0; i < numberOfDeposits; i++) {
+            _depositData[i] = PartialDepositData({
+                // We are using non-zero values to initialize the fields
+                // in order to actually allocate the storage slots
+                pubkey_1: bytes32(uint256(1)),
+                pubkey_2: bytes32(uint256(1)),
+                signature_1: bytes32(uint256(1)),
+                signature_2: bytes32(uint256(1)),
+                signature_3: bytes32(uint256(1))
+            });
         }
 
         _requestedStakeQuota = newRequestedStakeQuota;
         emit RequestedStakeQuota(_requestedStakeQuota);
     }
 
+    PartialDepositData[] private _partialDepositData;
+
     /// @dev The structure of partial deposit data
+    /// @dev To save gas, we chunk the 48 bytes public keys and 96 bytes signatures into 32 bytes pieces.
     /// @param pubkey The BLS12-381 public key of the validator
     /// @param signature The BLS12-381 signature of the deposit message
     /// @param depositValue The deposit value of the validator
     struct PartialDepositData {
-        bytes pubkey;
-        bytes signature;
-        uint256 depositValue;
+        bytes32 pubkey_1;
+        bytes32 pubkey_2;
+        bytes32 signature_1;
+        bytes32 signature_2;
+        bytes32 signature_3;
     }
 
     /// @dev The structure of full deposit data
@@ -144,36 +172,35 @@ contract StakingVaultV1 is StakingVaultV0 {
         if (
             pubkeys.length != signatures.length ||
             pubkeys.length != depositValues.length
-        ) {
-            revert InvalidDepositData();
+        ) revert InvalidDepositData();
+
+        // unchecked {
+        for (uint16 i = 0; i < numberOfDepositData; ) {
+            if (pubkeys[i].length != BeaconChain.PUBKEY_LENGTH)
+                revert PublicKeyLengthMismatch();
+            if (signatures[i].length != BeaconChain.SIGNATURE_LENGTH)
+                revert SignatureLengthMismatch();
+            if (depositValues[i] != BeaconChain.MAX_EFFECTIVE_BALANCE)
+                revert InvalidDepositAmount();
+
+            // TODO: Check pubkey is not already registered
+
+            // TODO: Check pubkey is not already exited
+
+            PartialDepositData storage pdd = _depositData[
+                _depositDataCount + i
+            ];
+            pdd.pubkey_1 = bytes32(pubkeys[i][:32]);
+            pdd.pubkey_2 = bytes32(pubkeys[i][32:48]);
+            pdd.signature_1 = bytes32(signatures[i][:32]);
+            pdd.signature_2 = bytes32(signatures[i][32:64]);
+            pdd.signature_3 = bytes32(signatures[i][64:]);
+
+            _stakeQuota += depositValues[i];
+
+            ++i;
         }
-
-        unchecked {
-            for (uint16 i = 0; i < numberOfDepositData; ) {
-                if (pubkeys[i].length != BeaconChain.PUBKEY_LENGTH) {
-                    revert PublicKeyLengthMismatch();
-                }
-                if (signatures[i].length != BeaconChain.SIGNATURE_LENGTH) {
-                    revert SignatureLengthMismatch();
-                }
-                // if deposit value is not equal to 32 ether
-                if (depositValues[i] < 1 ether) revert InvalidDepositAmount();
-
-                // TODO: Check pubkey is not already registered
-
-                // TODO: Check pubkey is not already exited
-
-                _depositData[_depositDataCount + i] = PartialDepositData({
-                    pubkey: pubkeys[i],
-                    signature: signatures[i],
-                    depositValue: depositValues[i]
-                });
-
-                _stakeQuota += depositValues[i];
-
-                ++i;
-            }
-        }
+        // }
 
         // We can safely downcast here as we have checked the length of pubkeys above
         _depositDataCount += uint16(numberOfDepositData);
@@ -195,47 +222,50 @@ contract StakingVaultV1 is StakingVaultV0 {
     function depositData(
         uint256 newStake
     ) public view returns (DepositData[] memory) {
-        if (newStake > _stakeQuota) {
-            revert StakeQuotaTooLow();
-        }
+        if (newStake > _stakeQuota) revert StakeQuotaTooLow();
+        if (newStake == 0 || newStake % BeaconChain.MAX_EFFECTIVE_BALANCE != 0)
+            revert InvalidDepositAmount();
 
-        DepositData[] memory tempDepositData = new DepositData[](0);
+        uint16 numberOfDeposits = uint16(
+            newStake / BeaconChain.MAX_EFFECTIVE_BALANCE
+        );
 
         // Construct 0x01 withdrawal credentials using the address of this staking vault
         bytes memory withdrawalCredentials = _withdrawalCredentials();
+        DepositData[] memory tempDepositData = new DepositData[](
+            numberOfDeposits
+        );
 
-        uint256 remainingDepositValue = newStake;
-        uint16 index = _depositDataIndex;
-        while (remainingDepositValue > 0 && index < _depositDataCount) {
-            PartialDepositData storage storedDepositData = _depositData[index];
+        for (uint16 i = 0; i < numberOfDeposits; i++) {
+            PartialDepositData storage storedDepositData = _depositData[
+                _depositDataIndex + i
+            ];
 
-            if (remainingDepositValue < storedDepositData.depositValue) {
-                // If the remaining deposit value is less than the required value
-                // for the next deposit data, revert the transaction
-                revert InvalidDepositAmount();
-            }
+            bytes memory pubkey = bytes.concat(
+                storedDepositData.pubkey_1,
+                bytes16(storedDepositData.pubkey_2)
+            );
+            bytes memory signature = bytes.concat(
+                storedDepositData.signature_1,
+                storedDepositData.signature_2,
+                storedDepositData.signature_3
+            );
 
             // TODO: Validate that the validator is not exiting or exited
 
-            // TODO: Fix array index
-            tempDepositData[0] = DepositData({
-                pubkey: storedDepositData.pubkey,
+            tempDepositData[i] = DepositData({
+                pubkey: pubkey,
                 withdrawalCredentials: withdrawalCredentials,
-                signature: storedDepositData.signature,
+                signature: signature,
                 depositDataRoot: BeaconChain.depositDataRoot(
-                    storedDepositData.pubkey,
+                    pubkey,
                     withdrawalCredentials,
-                    storedDepositData.signature,
-                    storedDepositData.depositValue
+                    signature,
+                    BeaconChain.MAX_EFFECTIVE_BALANCE
                 ),
-                depositValue: storedDepositData.depositValue
+                depositValue: BeaconChain.MAX_EFFECTIVE_BALANCE
             });
-
-            ++index;
         }
-
-        // If there are still funds left, revert the transaction
-        if (remainingDepositValue > 0) revert InvalidDepositAmount();
 
         return tempDepositData;
     }
@@ -254,62 +284,63 @@ contract StakingVaultV1 is StakingVaultV0 {
     /// - The message value does not match available deposit data
     receive() external payable {
         // TODO: Consider adding an allowlist of stakers
-        if (!hasRole(STAKER_ROLE, _msgSender())) {
+        if (!hasRole(STAKER_ROLE, _msgSender()))
             revert AccessControlUnauthorizedAccount(_msgSender(), STAKER_ROLE);
-        }
 
-        if (msg.value > _stakeQuota) {
-            revert StakeQuotaTooLow();
-        }
-
-        uint256 remainingDepositValue = msg.value;
+        if (msg.value > _stakeQuota) revert StakeQuotaTooLow();
+        if (
+            msg.value < BeaconChain.MAX_EFFECTIVE_BALANCE ||
+            msg.value % BeaconChain.MAX_EFFECTIVE_BALANCE != 0
+        ) revert InvalidDepositAmount();
 
         // Construct 0x01 withdrawal credentials using the address of this staking vault
         bytes memory withdrawalCredentials = _withdrawalCredentials();
 
-        while (
-            remainingDepositValue > 0 && _depositDataIndex < _depositDataCount
-        ) {
-            PartialDepositData storage storedDepositData = _depositData[
-                _depositDataIndex
-            ];
+        uint16 numberOfDeposits = uint16(
+            msg.value / BeaconChain.MAX_EFFECTIVE_BALANCE
+        );
 
-            if (remainingDepositValue < storedDepositData.depositValue) {
-                // If the remaining deposit value is less than the required value
-                // for the next deposit data, revert the transaction
-                revert InvalidDepositAmount();
-            }
+        for (uint16 i = 0; i < numberOfDeposits; i++) {
+            PartialDepositData storage storedDepositData = _depositData[
+                _depositDataIndex + i
+            ];
 
             // TODO: Validate validator is not exited
 
+            bytes memory pubkey = bytes.concat(
+                storedDepositData.pubkey_1,
+                bytes16(storedDepositData.pubkey_2)
+            );
+            bytes memory signature = bytes.concat(
+                storedDepositData.signature_1,
+                storedDepositData.signature_2,
+                storedDepositData.signature_3
+            );
+
             // Deposit the funds to the beacon chain deposit contract
             _depositContractAddress.deposit{
-                value: storedDepositData.depositValue
+                value: BeaconChain.MAX_EFFECTIVE_BALANCE
             }(
-                storedDepositData.pubkey,
+                pubkey,
                 withdrawalCredentials,
-                storedDepositData.signature,
+                signature,
                 BeaconChain.depositDataRoot(
-                    storedDepositData.pubkey,
+                    pubkey,
                     withdrawalCredentials,
-                    storedDepositData.signature,
-                    storedDepositData.depositValue
+                    signature,
+                    BeaconChain.MAX_EFFECTIVE_BALANCE
                 )
             );
 
-            remainingDepositValue -= storedDepositData.depositValue;
-            _stakeQuota -= storedDepositData.depositValue;
-            _stakedBalance += storedDepositData.depositValue;
-            _stakedBalances[storedDepositData.pubkey] += storedDepositData
-                .depositValue;
+            _stakeQuota -= BeaconChain.MAX_EFFECTIVE_BALANCE;
+            _stakedBalance += BeaconChain.MAX_EFFECTIVE_BALANCE;
+            // _stakedBalances[pubkey] += BeaconChain.MAX_EFFECTIVE_BALANCE;
             // We delete the deposit data as they will not be used again and
             // deleting them provides a gas refund
-            delete _depositData[_depositDataIndex];
-            ++_depositDataIndex;
+            // delete _depositData[_depositDataIndex];
         }
 
-        // If there are still funds left, revert the transaction
-        if (remainingDepositValue > 0) revert InvalidDepositAmount();
+        _depositDataIndex += numberOfDeposits;
     }
 
     /// @notice Get the withdrawal credentials of this staking vault
@@ -340,9 +371,7 @@ contract StakingVaultV1 is StakingVaultV0 {
     /// Reverts if the requested amount does not match with validator balances
     /// @param amount The amount of Ether to unbond
     function requestUnbond(uint256 amount) external onlyRole(STAKER_ROLE) {
-        if (amount > _stakedBalance) {
-            revert InvalidUnbondAmount();
-        }
+        if (amount > _stakedBalance) revert InvalidUnbondAmount();
 
         // TODO: if (_stakedBalances[pubkey] == 0) revert ValidatorNotActive();
         // TODO: Verify the amount can be unbonded by exiting certain validators
@@ -360,9 +389,7 @@ contract StakingVaultV1 is StakingVaultV0 {
     /// Reverts if any of the valdiators are not active or exitable
     /// @param amount The amount of Ether to unbond
     function unbond(uint256 amount) external onlyRole(STAKER_ROLE) {
-        if (amount > _unbondingAmount) {
-            revert InvalidUnbondAmount();
-        }
+        if (amount > _unbondingAmount) revert InvalidUnbondAmount();
         _stakedBalance -= amount;
         _unbondingAmount += amount;
         _exitedStake += amount;
@@ -385,9 +412,7 @@ contract StakingVaultV1 is StakingVaultV0 {
     function claimRewards() external virtual onlyRole(STAKER_ROLE) {
         uint256 claimable = claimableRewards();
 
-        if (claimable == 0) {
-            revert NoFundsToRelease();
-        }
+        if (claimable == 0) revert NoFundsToRelease();
 
         _claimedRewards += claimable;
 
@@ -401,9 +426,7 @@ contract StakingVaultV1 is StakingVaultV0 {
     function claimFees() external virtual onlyRole(OPERATOR_ROLE) {
         uint256 claimable = claimableFees();
 
-        if (claimable == 0) {
-            revert NoFundsToRelease();
-        }
+        if (claimable == 0) revert NoFundsToRelease();
 
         _claimedFees += claimable;
 
@@ -448,9 +471,7 @@ contract StakingVaultV1 is StakingVaultV0 {
     function claimableFees() public view returns (uint256) {
         uint256 billable = billableRewards();
 
-        if (billable == 0) {
-            return 0;
-        }
+        if (billable == 0) return 0;
 
         uint256 totalFees = (billable * _feeBasisPoints) / 10 ** 4;
         return totalFees - _claimedFees;
