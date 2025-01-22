@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Deposit for Development/Validators/1",
+    "account": "Development/Validators/1",
+    "pubkey": "0xae9cdfe716965bb14bbcfe88e39903e6b3802804ffa27764be8e515aa576bd996af37f58f45dd6eeb5414d4b56879713",
+    "withdrawal_credentials": "0x010000000000000000000000c3d8108fc7f92b936552d658fc3dbc834193f344",
+    "signature": "0x8b20f963782ca9c3e93588b08039a04df86746f0edf7cfa4801e69e899adf250b96b61a60522be25e4ae39df7186df860c688ffde35739d27d8ca9eadf9104dc7c5528c44f63928ae6ca5cb9652b76140f3deea1663b885047489bb09c22593e",
+    "amount": 32000000000,
+    "deposit_data_root": "0xfcc1d07d8f0e28418ef0b45cbc10d664c1bbf9f505b64ec556511f18cc6debfa",
+    "deposit_message_root": "0x1dcd47ef047177ee6fc8e25d362b33394e7d344d6b98a3e4c4512df797273205",
+    "fork_version": "0x10000038",
+    "version": 3
+  },
+  {
+    "name": "Deposit for Development/Validators/2",
+    "account": "Development/Validators/2",
+    "pubkey": "0xa2fe7a48c6ac843f0f96bb66addae65410000e06ff0b96a36b21895d2bbc12be75a7c1d76a8842a934a8e9265cf1adc8",
+    "withdrawal_credentials": "0x010000000000000000000000c3d8108fc7f92b936552d658fc3dbc834193f344",
+    "signature": "0xa2b814d22bf734823d58429c69f4d9bb4606f7d5bb75c10e9288b54bb819a6fa406825bd5c0e487f4afdb8eccd4135fb11f6520eb2ba08e48b972a8510cd77a05044bc73dea8a76ce637e2e3f4c77582b233cc68ed6fa7e1a0ecf111beeb45b6",
+    "amount": 32000000000,
+    "deposit_data_root": "0xb80853caf083772e6326f6c2fc5148fcf2a8e874f1f0b600095a59d26a472a2f",
+    "deposit_message_root": "0x917ad75840d599b43573fc9502fa1de3ee7d9e94e43b961534264ac583ab37df",
+    "fork_version": "0x10000038",
+    "version": 3
+  },
+  {
+    "name": "Deposit for Development/Validators/3",
+    "account": "Development/Validators/3",
+    "pubkey": "0x94b1cb84ef1f935c59e60e30c0b2331b52326588f48cbb9528a77e2fd145cca2c48df95c3a9bf8f0f8ea03336a104f6f",
+    "withdrawal_credentials": "0x010000000000000000000000c3d8108fc7f92b936552d658fc3dbc834193f344",
+    "signature": "0xaf64a91fd12e82865bfd07f3f560d7a9f577304d32c87ca14050ea5b0407128ad0a3322eca50a8d1d9bc660c24f6734f08b69311e68e6aff81892166d9624665c755059bfb62e036e757c794f3b672704e695fa76fb8429902179edbda4e98dc",
+    "amount": 32000000000,
+    "deposit_data_root": "0xb51d039c4c059da61a3a27f3abfd0efcbcc5ef18c8db6340a767fadb335c38f3",
+    "deposit_message_root": "0xccbde72bef375c2fc2dcbb285a1003732a35bb7122b385c67aca765fd12e2a6f",
+    "fork_version": "0x10000038",
+    "version": 3
+  }
+]

@@ -7,7 +7,6 @@ import {Test} from "forge-std/Test.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {IDepositContract} from "@ethereum/beacon-deposit-contract/IDepositContract.sol";
 import {DepositContract} from "@ethereum/beacon-deposit-contract/DepositContract.sol";
-import {IEIP7002} from "@eips/7002/IEIP7002.sol";
 import {StakingVaultV1} from "../src/StakingVault.v1.sol";
 import {StakingVaultFactory} from "../src/StakingVaultFactory.sol";
 
@@ -20,63 +19,35 @@ abstract contract StakingVaultSetup is Test {
     address payable feeRecipient;
     address payable staker;
     uint256 feeBasisPoints;
+    address withdrawalRequestPredeployAddress =
+        address(0x0c15F14308530b7CDB8460094BbB9cC28b9AaaAA);
 
     // before each
     function setUp() public {
         operator = payable(address(0x01));
         feeRecipient = payable(address(0x02));
         staker = payable(address(0x03));
-        feeBasisPoints = 1000;
+        feeBasisPoints = 1_000;
 
+        // Deploy the EIP-7002 contract
         string[] memory inputs = new string[](2);
         inputs[0] = "geas";
-        inputs[1] = "lib/eip-7002/main.eas";
-        bytes memory res = vm.ffi(inputs);
-        assertEq(string(res), "gm");
+        inputs[1] = "lib/sys-asm/src/withdrawals/main.eas";
+        bytes memory eip7002Bytecode = vm.ffi(inputs);
+        vm.etch(withdrawalRequestPredeployAddress, eip7002Bytecode);
+        vm.deal(withdrawalRequestPredeployAddress, 0 ether);
 
-        bytes
-            memory eip7002 = hex"3373fffffffffffffffffffffffffffffffffffffffe1460cb5760115f54807fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff146101f457600182026001905f5b5f82111560685781019083028483029004916001019190604d565b909390049250505036603814608857366101f457346101f4575f5260205ff35b34106101f457600154600101600155600354806003026004013381556001015f35815560010160203590553360601b5f5260385f601437604c5fa0600101600355005b6003546002548082038060101160df575060105b5f5b8181146101835782810160030260040181604c02815460601b8152601401816001015481526020019060020154807fffffffffffffffffffffffffffffffff00000000000000000000000000000000168252906010019060401c908160381c81600701538160301c81600601538160281c81600501538160201c81600401538160181c81600301538160101c81600201538160081c81600101535360010160e1565b910180921461019557906002556101a0565b90505f6002555f6003555b5f54807fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff14156101cd57505f5b6001546002828201116101e25750505f6101e8565b01600290035b5f555f600155604c025ff35b5f5ffd";
-        address withdrawalRequestPredeployAddress = address(
-            0x0c15F14308530b7CDB8460094BbB9cC28b9AaaAA
-        );
-        vm.etch(withdrawalRequestPredeployAddress, eip7002);
-        vm.deal(withdrawalRequestPredeployAddress, 96 ether);
-        IEIP7002 withdrawalRequestPredeploy = IEIP7002(
-            withdrawalRequestPredeployAddress
-        );
-
-        bytes memory data = abi.encodeWithSelector(
-            withdrawalRequestPredeploy.getFee.selector
-        );
-        (bool s, bytes memory ret) = address(withdrawalRequestPredeploy).call{
-            value: 0 ether
-        }("");
-
-        uint256 withdrawalFee = uint256(bytes32(ret));
-        console.log("Fee: %d Wei", withdrawalFee);
-        // assertEq(withdrawalFee, 0.01 ether);
-
-        bytes
-            memory pubkey = hex"b87870ea7c529836358b715669ffe344d70b862ce6480fa6cd766683e6348e0b98db19b0419b9aac370ef922602031a0";
-        uint64 withdrawalAmountGwei = uint64(32 ether / 1 gwei);
-        data = bytes.concat(
-            pubkey,
-            bytes8(withdrawalAmountGwei) // Convert to big-endian bytes8
-        );
-        (s, ret) = address(withdrawalRequestPredeploy).call{
-            value: withdrawalFee
-        }(data);
-        console.log("Withdrawal request succeeded: %s", s);
-        console.logBytes(ret);
-
+        // Deploy the native Ethereum Beacon Deposit Contract
         address dci = address(new DepositContract());
         vm.etch(address(0x4242424242424242424242424242424242424242), dci.code);
         depositContract = IDepositContract(
             address(0x4242424242424242424242424242424242424242)
         );
 
+        // Deploy our StakingVault implementation contract
         stakingVault = new StakingVaultV1();
 
+        // Deploy the StakingVaultFactory contract
         stakingVaultFactory = new StakingVaultFactory(
             stakingVault,
             operator,
@@ -84,6 +55,7 @@ abstract contract StakingVaultSetup is Test {
             feeBasisPoints
         );
 
+        // Deploy one instance of the StakingVault, in the name of the staker
         vm.prank(staker);
         stakingVaultProxy = StakingVaultV1(
             payable(address(stakingVaultFactory.createVault()))
@@ -116,12 +88,6 @@ contract StakingVaultV1Test is Test, StakingVaultSetup {
         vm.prank(staker);
         stakingVaultProxy.requestStakeQuota(32 ether);
     }
-
-    /// @dev `requestStakeQuota` can only increase the stake quota
-    // TODO: implement
-
-    /// @dev `requestStakeQuota` can only request multiples of 32
-    // TODO: implement
 
     using stdJson for string;
 
@@ -454,12 +420,12 @@ contract StakingVaultV1Test is Test, StakingVaultSetup {
 
     function test_claimingSemantics() public {
         vm.prank(staker);
-        stakingVaultProxy.requestStakeQuota(32 ether);
+        stakingVaultProxy.requestStakeQuota(64 ether);
 
         string memory root = vm.projectRoot();
         string memory path = string.concat(
             root,
-            "/tests/fixtures/32eth-deposit.json"
+            "/tests/fixtures/64eth-deposit.json"
         );
         string memory json = vm.readFile(path);
         bytes[] memory pubkeys = vm.parseJsonBytesArray(json, ".pubkeys");
@@ -473,16 +439,16 @@ contract StakingVaultV1Test is Test, StakingVaultSetup {
         vm.prank(operator);
         stakingVaultProxy.approveStakeQuota(pubkeys, signatures, depositValues);
 
-        vm.deal(staker, 32 ether);
+        vm.deal(staker, 64 ether);
         vm.prank(staker);
-        (bool success, ) = payable(stakingVaultProxy).call{value: 32 ether}("");
+        (bool success, ) = payable(stakingVaultProxy).call{value: 64 ether}("");
         assertTrue(success, "Call failed");
 
         assertEq(staker.balance, 0 ether);
         assertEq(operator.balance, 0 ether);
         assertEq(feeRecipient.balance, 0 ether);
         assertEq(address(stakingVaultProxy).balance, 0 ether);
-        assertEq(address(depositContract).balance, 32 ether);
+        assertEq(address(depositContract).balance, 64 ether);
 
         // Simulate that 1 Ether has accumulated in rewards in the vault
         vm.deal(address(stakingVaultProxy), 1 ether);
@@ -553,14 +519,366 @@ contract StakingVaultV1Test is Test, StakingVaultSetup {
         assertEq(operator.balance, 0.0 ether);
         assertEq(feeRecipient.balance, 0.12 ether);
         assertEq(address(stakingVaultProxy).balance, 0 ether);
+
+        // Adding more 1 Ether in new staking rewards
+        vm.deal(address(stakingVaultProxy), 1 ether);
+        assertEq(stakingVaultProxy.claimableRewards(), 0.9 ether);
+        assertEq(stakingVaultProxy.claimableFees(), 0.1 ether);
+        assertEq(stakingVaultProxy.withdrawablePrincipal(), 0 ether);
+
+        // We are adding some rewards again but the the staker request unbonding
+        // 32 Ether of the principal
+        bytes[] memory unbondingPubkeys = new bytes[](1);
+        unbondingPubkeys[0] = pubkeys[0];
+        vm.prank(staker);
+        stakingVaultProxy.requestUnbondings{value: 1234 wei}(unbondingPubkeys);
+        // Refund the withdrawal fee sent (to simplify subsequent assertions)
+        vm.deal(staker, staker.balance + 1234 wei);
+
+        // The unbonding fee ends up in the eip-7002 contract, not in the vault
+        assertEq(address(stakingVaultProxy).balance, 1 ether);
+        assertEq(withdrawalRequestPredeployAddress.balance, 1234 wei);
+
+        assertEq(stakingVaultProxy.stakedBalance(), 32 ether);
+
+        // After the unbonding, the principal takes preference over fees and
+        // rewards. The staker will now be able to claim any remainder until
+        // the principal has been paid out.
+        // Even though the 1 Ether in the vault right now are rewards, the
+        // staker can withdraw them as principal.
+        assertEq(stakingVaultProxy.claimableRewards(), 0 ether);
+        assertEq(stakingVaultProxy.claimableFees(), 0 ether);
+        assertEq(stakingVaultProxy.withdrawablePrincipal(), 1 ether);
+
+        // Only the staker can withdraw withdrawable principal
+        vm.prank(operator);
+        vm.expectPartialRevert(
+            IAccessControl.AccessControlUnauthorizedAccount.selector
+        );
+        stakingVaultProxy.withdrawPrincipal();
+
+        vm.prank(staker);
+        stakingVaultProxy.withdrawPrincipal();
+
+        // After the withdrawal, the staker has received the principal
+        assertEq(staker.balance, 2.08 ether);
+        assertEq(address(stakingVaultProxy).balance, 0 ether);
+        assertEq(stakingVaultProxy.claimableRewards(), 0 ether);
+        assertEq(stakingVaultProxy.claimableFees(), 0 ether);
+        assertEq(stakingVaultProxy.withdrawablePrincipal(), 0 ether);
+
+        // Simulating some more rewards to accrue before the actual principal arrives in the vault
+        vm.deal(address(stakingVaultProxy), 1 ether);
+        assertEq(stakingVaultProxy.claimableRewards(), 0 ether);
+        assertEq(stakingVaultProxy.claimableFees(), 0 ether);
+        assertEq(stakingVaultProxy.withdrawablePrincipal(), 1 ether);
+
+        // And withdrawing the principal again leads to:
+        vm.prank(staker);
+        stakingVaultProxy.withdrawPrincipal();
+        assertEq(staker.balance, 3.08 ether);
+        assertEq(address(stakingVaultProxy).balance, 0 ether);
+        assertEq(stakingVaultProxy.claimableRewards(), 0 ether);
+        assertEq(stakingVaultProxy.claimableFees(), 0 ether);
+        assertEq(stakingVaultProxy.withdrawablePrincipal(), 0 ether);
+
+        // Now we finally receive the principal back from the beacon chain
+        // including some additional rewards. This leaves us with the 2 * 1 Ether
+        // rewards that have been withdrawn as principal above and the 32 Ether
+        // pricipal arriving now plus 0.1 Ether rewards that the principal comes with.
+        vm.deal(address(stakingVaultProxy), 32.1 ether);
+        // Of which we expect 2.1 ether to be billable rewards and 30 Ether to be principal
+        assertEq(stakingVaultProxy.claimableRewards(), 1.89 ether); // 90 % of 2.1 Ether
+        assertEq(stakingVaultProxy.claimableFees(), 0.21 ether); // 10 % of 2.1 Ether
+        assertEq(stakingVaultProxy.withdrawablePrincipal(), 30 ether);
+
+        // Withdrawing the principal now doesn't affect the rewards
+        vm.prank(staker);
+        stakingVaultProxy.withdrawPrincipal();
+        assertEq(staker.balance, 33.08 ether);
+        assertEq(address(stakingVaultProxy).balance, 2.1 ether);
+        assertEq(stakingVaultProxy.claimableRewards(), 1.89 ether);
+        assertEq(stakingVaultProxy.claimableFees(), 0.21 ether);
+        assertEq(stakingVaultProxy.withdrawablePrincipal(), 0 ether);
+
+        // Claiming fees doesn't affect the claimable rewards
+        assertEq(feeRecipient.balance, 0.12 ether);
+        vm.prank(operator);
+        stakingVaultProxy.claimFees();
+        assertEq(staker.balance, 33.08 ether);
+        assertEq(feeRecipient.balance, 0.33 ether);
+        assertEq(address(stakingVaultProxy).balance, 1.89 ether);
+        assertEq(stakingVaultProxy.claimableRewards(), 1.89 ether);
+        assertEq(stakingVaultProxy.claimableFees(), 0 ether);
+        assertEq(stakingVaultProxy.withdrawablePrincipal(), 0 ether);
+
+        // And rewards can be claimed too
+        vm.prank(staker);
+        stakingVaultProxy.claimRewards();
+        assertEq(staker.balance, 34.97 ether);
+        assertEq(feeRecipient.balance, 0.33 ether);
+        assertEq(address(stakingVaultProxy).balance, 0 ether);
+        assertEq(stakingVaultProxy.claimableRewards(), 0 ether);
+        assertEq(stakingVaultProxy.claimableFees(), 0 ether);
+        assertEq(stakingVaultProxy.withdrawablePrincipal(), 0 ether);
+    }
+
+    /// @dev `requestStakeQuota` reverts for non-32 ETH multiples
+    function test_revertNonMultipleOf32Ether() public {
+        // Test values less than 32 ETH
+        vm.prank(staker);
+        vm.expectRevert(); // Add specific error if defined in contract
+        stakingVaultProxy.requestStakeQuota(16 ether);
+
+        // Test values greater than 32 ETH but not multiple
+        vm.prank(staker);
+        vm.expectRevert();
+        stakingVaultProxy.requestStakeQuota(40 ether);
+
+        // Test odd multiples
+        vm.prank(staker);
+        vm.expectRevert();
+        stakingVaultProxy.requestStakeQuota(33 ether);
+
+        // Test decimal multiples
+        vm.prank(staker);
+        vm.expectRevert();
+        stakingVaultProxy.requestStakeQuota(32.5 ether);
+
+        // Verify that correct multiple still works
+        vm.prank(staker);
+        stakingVaultProxy.requestStakeQuota(64 ether);
+
+        // Test very large non-multiple amount
+        vm.prank(staker);
+        vm.expectRevert();
+        stakingVaultProxy.requestStakeQuota(1000 ether);
+    }
+
+    /// @dev Tests depositor management and staking permissions
+    function test_depositorManagementAndStaking() public {
+        address payable depositor1 = payable(address(0x11));
+        address payable depositor2 = payable(address(0x12));
+
+        // Request stake quota
+        vm.prank(staker);
+        stakingVaultProxy.requestStakeQuota(64 ether);
+
+        // Set up deposit data
+        string memory root = vm.projectRoot();
+        string memory path = string.concat(
+            root,
+            "/tests/fixtures/64eth-deposit.json"
+        );
+        string memory json = vm.readFile(path);
+        bytes[] memory pubkeys = vm.parseJsonBytesArray(json, ".pubkeys");
+        bytes[] memory signatures = vm.parseJsonBytesArray(json, ".signatures");
+        uint256[] memory depositValues = vm.parseJsonUintArray(
+            json,
+            ".amounts"
+        );
+
+        // Operator approves the stake quota
+        vm.prank(operator);
+        stakingVaultProxy.approveStakeQuota(pubkeys, signatures, depositValues);
+
+        // Test that non-depositor can't stake
+        vm.deal(depositor1, 32 ether);
+        vm.prank(depositor1);
+        (bool success, ) = payable(stakingVaultProxy).call{value: 32 ether}("");
+        assertFalse(
+            success,
+            "Unauthorized depositor should not be able to stake"
+        );
+
+        // Add depositor1
+        vm.prank(staker);
+        stakingVaultProxy.addDepositor(depositor1);
+
+        // Verify depositor1 can now stake
+        vm.deal(depositor1, 32 ether);
+        vm.prank(depositor1);
+        (success, ) = payable(stakingVaultProxy).call{value: 32 ether}("");
+        assertTrue(success, "Authorized depositor should be able to stake");
+        assertEq(address(depositContract).balance, 32 ether);
+
+        // Add depositor2
+        vm.prank(staker);
+        stakingVaultProxy.addDepositor(depositor2);
+
+        // Verify depositor2 can stake
+        vm.deal(depositor2, 32 ether);
+        vm.prank(depositor2);
+        (success, ) = payable(stakingVaultProxy).call{value: 32 ether}("");
+        assertTrue(success, "Second depositor should be able to stake");
+        assertEq(address(depositContract).balance, 64 ether);
+
+        // Remove depositor1
+        vm.prank(staker);
+        stakingVaultProxy.removeDepositor(depositor1);
+
+        // Verify removed depositor can't stake anymore
+        vm.deal(depositor1, 32 ether);
+        vm.prank(depositor1);
+        (success, ) = payable(stakingVaultProxy).call{value: 32 ether}("");
+        assertFalse(success, "Removed depositor should not be able to stake");
+
+        // Test invalid depositor management
+        vm.prank(staker);
+        vm.expectRevert(); // ZeroAddress error
+        stakingVaultProxy.addDepositor(payable(address(0)));
+
+        vm.prank(staker);
+        vm.expectRevert(); // ZeroAddress error
+        stakingVaultProxy.removeDepositor(payable(address(0)));
+
+        // Test that staker can't be removed as depositor
+        vm.prank(staker);
+        vm.expectRevert(); // InvalidRoleRemoval error
+        stakingVaultProxy.removeDepositor(payable(staker));
+
+        // Test that only staker can manage depositors
+        vm.prank(depositor2);
+        vm.expectRevert(); // AccessControl error
+        stakingVaultProxy.addDepositor(depositor1);
+
+        vm.prank(depositor2);
+        vm.expectRevert(); // AccessControl error
+        stakingVaultProxy.removeDepositor(depositor1);
+    }
+
+    /// @dev Tests sequential staking with multiple quota requests and approvals
+    function test_sequentialStakingWithMultipleQuotas() public {
+        // First round - 32 ETH
+        vm.prank(staker);
+        stakingVaultProxy.requestStakeQuota(32 ether);
+
+        // Load 32 ETH deposit data
+        string memory root = vm.projectRoot();
+        string memory path32 = string.concat(
+            root,
+            "/tests/fixtures/32eth-deposit.json"
+        );
+        string memory json32 = vm.readFile(path32);
+        bytes[] memory pubkeys32 = vm.parseJsonBytesArray(json32, ".pubkeys");
+        bytes[] memory signatures32 = vm.parseJsonBytesArray(
+            json32,
+            ".signatures"
+        );
+        uint256[] memory depositValues32 = vm.parseJsonUintArray(
+            json32,
+            ".amounts"
+        );
+
+        // Operator approves first quota
+        vm.prank(operator);
+        stakingVaultProxy.approveStakeQuota(
+            pubkeys32,
+            signatures32,
+            depositValues32
+        );
+
+        // Verify deposit data for full amount
+        StakingVaultV1.DepositData[] memory pd = stakingVaultProxy.depositData(
+            32 ether
+        );
+
+        assertEq(stakingVaultProxy.stakeQuota(), 32 ether);
+        assertEq(pd[0].pubkey, pubkeys32[0]);
+        assertEq(
+            pd[0].withdrawalCredentials,
+            vm.parseJsonBytes32(json32, ".withdrawal_credentials[0]")
+        );
+        assertEq(pd[0].signature, signatures32[0]);
+        assertEq(
+            pd[0].depositDataRoot,
+            vm.parseJsonBytes32(json32, ".deposit_data_roots[0]")
+        );
+        assertEq(pd[0].depositValue, depositValues32[0]);
+
+        // Stake first 32 ETH
+        vm.deal(staker, 32 ether);
+        vm.prank(staker);
+        (bool success, ) = payable(stakingVaultProxy).call{value: 32 ether}("");
+        assertTrue(success, "First stake failed");
+        assertEq(address(depositContract).balance, 32 ether);
+
+        // Second round - 64 ETH
+        vm.prank(staker);
+        stakingVaultProxy.requestStakeQuota(64 ether);
+
+        // Load 64 ETH deposit data
+        string memory path64 = string.concat(
+            root,
+            "/tests/fixtures/64eth-deposit.json"
+        );
+        string memory json64 = vm.readFile(path64);
+        bytes[] memory pubkeys64 = vm.parseJsonBytesArray(json64, ".pubkeys");
+        bytes[] memory signatures64 = vm.parseJsonBytesArray(
+            json64,
+            ".signatures"
+        );
+        uint256[] memory depositValues64 = vm.parseJsonUintArray(
+            json64,
+            ".amounts"
+        );
+
+        // Operator approves second quota
+        vm.prank(operator);
+        stakingVaultProxy.approveStakeQuota(
+            pubkeys64,
+            signatures64,
+            depositValues64
+        );
+
+        // Verify deposit data for full amount
+        pd = stakingVaultProxy.depositData(64 ether);
+
+        // Verify last two validator data (from 64 ETH deposit)
+        assertEq(pd[0].pubkey, pubkeys64[0]);
+        assertEq(pd[1].pubkey, pubkeys64[1]);
+
+        // Stake second quota (64 ETH)
+        vm.deal(staker, 64 ether);
+        vm.prank(staker);
+        (success, ) = payable(stakingVaultProxy).call{value: 64 ether}("");
+        assertTrue(success, "Second stake failed");
+
+        // Verify final balances
+        assertEq(address(depositContract).balance, 96 ether);
+        assertEq(address(stakingVaultProxy).balance, 0 ether);
+        assertEq(staker.balance, 0 ether);
+    }
+
+    /// @dev Tests fee estimation for requesting withdrawals via EIP-7002
+    function test_feeRecommendationForUnbondingRequests() public {
+        address wrpa = withdrawalRequestPredeployAddress;
+
+        // Assume the base fee is currently 10 wei
+        vm.mockCall(wrpa, bytes(""), abi.encode(10));
+
+        // We assume that there is exactly one free slot in the withdrawal queue.
+        // Therefore, the recommended fee for one unbonding would equal the base fee.
+        uint256 fee = stakingVaultProxy.recommendedWithdrawalRequestsFee(1);
+        assertEq(fee, 10 wei);
+
+        // When withdrawing two slots, the fee would be increased exponentially
+        fee = stakingVaultProxy.recommendedWithdrawalRequestsFee(2);
+        assertEq(fee, 21 wei);
+
+        // ... but stay the same for three
+        fee = stakingVaultProxy.recommendedWithdrawalRequestsFee(3);
+        assertEq(fee, 33 wei);
+
+        // ... and exponentially increase again for four
+        fee = stakingVaultProxy.recommendedWithdrawalRequestsFee(4);
+        assertEq(fee, 47 wei);
+
+        // Assume the base fee is currently 1 wei
+        vm.mockCall(wrpa, bytes(""), abi.encode(1));
+
+        // ... and exponentially increase again for four
+        fee = stakingVaultProxy.recommendedWithdrawalRequestsFee(7);
+        assertEq(fee, 48 wei);
     }
 }
-
-// bytes memory reconstructedDdr = abi.encodePacked(
-//     stakingVaultProxy.deposit_data_root{value: 32 ether}(
-//         pd[0].pubkey,
-//         pd[0].withdrawalCredentials,
-//         pd[0].signature
-//     )
-// );
-// console.logBytes(reconstructedDdr);

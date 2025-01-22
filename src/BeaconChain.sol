@@ -3,6 +3,8 @@ pragma solidity 0.8.28;
 
 import {Bytes} from "@openzeppelin/contracts/utils/Bytes.sol";
 
+/// @title BeaconChain
+/// @dev A library with beacon chain specific constants and a function to reconstruct the deposit data root from partial deposit data
 library BeaconChain {
     // @dev The minimum amount required to activate a validator
     uint256 public constant MIN_ACTIVATION_BALANCE = 32 ether;
@@ -15,6 +17,7 @@ library BeaconChain {
     //
     // https://eips.ethereum.org/EIPS/eip-7251
     uint256 public constant MAX_EFFECTIVE_BALANCE = 32 ether;
+    uint64 public constant MAX_EFFECTIVE_BALANCE_IN_GWEI = 32_000_000_000;
 
     /// @dev The byte-length of validator public keys
     uint256 public constant PUBKEY_LENGTH = 48;
@@ -43,12 +46,13 @@ library BeaconChain {
         // Check deposit amount: The deposit value must be a multiple of gwei
         if (depositAmountInWei % 1 gwei != 0) revert DepositAmountInvalid();
 
-        uint depositAmountInGwei = depositAmountInWei / 1 gwei;
+        uint256 depositAmountInGwei = depositAmountInWei / 1 gwei;
         // The deposit value must not exceed the maximum uint64 value
-        if (depositAmountInGwei > type(uint64).max)
+        if (depositAmountInGwei > type(uint64).max) {
             revert DepositAmountInvalid();
+        }
 
-        bytes memory depositAmount = _to_little_endian_64(
+        bytes memory depositAmount = _toLittleEndian64(
             uint64(depositAmountInGwei)
         );
         bytes32 pubkeyRoot = sha256(abi.encodePacked(pubkey, bytes16(0)));
@@ -81,9 +85,9 @@ library BeaconChain {
     /// @dev Convert a uint64 value to a little-endian byte array
     /// Implementation adapted from the Ethereum 2.0 specification:
     /// https://github.com/ethereum/consensus-specs/blob/dev/solidity_deposit_contract/deposit_contract.sol#L165-L177
-    function _to_little_endian_64(
+    function _toLittleEndian64(
         uint64 value
-    ) internal pure returns (bytes memory ret) {
+    ) private pure returns (bytes memory ret) {
         ret = new bytes(8);
         bytes8 bytesValue = bytes8(value);
         // Byteswapping during copying to bytes.

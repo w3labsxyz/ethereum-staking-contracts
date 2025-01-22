@@ -7,7 +7,7 @@ gas_reports = ["*"]
 optimizer = true
 optimizer_runs = 10_000
 out = "out"
-script = "script"
+script = "scripts"
 solc = "0.8.28"
 src = "src"
 test = "tests"
@@ -33,4 +33,4 @@ tab_width = 4
 wrap_comments = true
 
 [rpc_endpoints]
-localhost = "http://localhost:8545"
+dev = "http://localhost:${EL_RPC_PORT}"

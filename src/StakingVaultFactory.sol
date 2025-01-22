@@ -3,9 +3,10 @@ pragma solidity 0.8.28;
 
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {ReentrancyGuardTransientUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardTransientUpgradeable.sol";
 import {StakingVaultV0} from "./StakingVault.v0.sol";
 
-contract StakingVaultFactory is Ownable {
+contract StakingVaultFactory is Ownable, ReentrancyGuardTransientUpgradeable {
     /// @dev The address of the StakingVault implementation contract
     StakingVaultV0 private immutable _stakingVault;
 
@@ -33,17 +34,21 @@ contract StakingVaultFactory is Ownable {
     /// @dev Error when the fee recipient address is the zero address
     error FeeRecipientZeroAddress();
 
+    /// @dev Event emitted when a new vault is created
     event VaultCreated(address indexed owner, address indexed vault);
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(
         StakingVaultV0 newStakingVault,
         address payable newOperator,
         address payable newFeeRecipient,
         uint256 newFeeBasisPoints
     ) Ownable(msg.sender) {
-        if (address(newStakingVault) == address(0)) {
+        _disableInitializers();
+
+        if (address(newStakingVault) == address(0))
             revert ImplementationZeroAddress();
-        }
+
         if (newOperator == address(0)) revert OperatorZeroAddress();
         if (newFeeRecipient == address(0)) revert FeeRecipientZeroAddress();
 
@@ -54,13 +59,13 @@ contract StakingVaultFactory is Ownable {
     }
 
     /// @notice Create a new proxy to the StakingVault
-    function createVault() external returns (address) {
+    function createVault() external nonReentrant returns (address) {
         if (hasVault(msg.sender)) revert OneVaultPerAddress();
 
         ERC1967Proxy proxy = new ERC1967Proxy(
             address(_stakingVault),
             abi.encodeWithSelector(
-                StakingVaultV0.initialize_v0.selector,
+                StakingVaultV0.initializeV0.selector,
                 _defaultOperator,
                 _defaultFeeRecipient,
                 msg.sender,
@@ -114,6 +119,8 @@ contract StakingVaultFactory is Ownable {
     function setDefaultOperator(
         address payable newOperator
     ) external onlyOwner {
+        if (newOperator == address(0)) revert OperatorZeroAddress();
+
         _defaultOperator = newOperator;
     }
 
@@ -121,6 +128,15 @@ contract StakingVaultFactory is Ownable {
     function setDefaultFeeRecipient(
         address payable newFeeRecipient
     ) external onlyOwner {
+        if (newFeeRecipient == address(0)) revert FeeRecipientZeroAddress();
+
         _defaultFeeRecipient = newFeeRecipient;
+    }
+
+    /// @notice Update the default fee basis points
+    function setDefaultFeeBasisPoints(
+        uint256 newFeeBasisPoints
+    ) external onlyOwner {
+        _defaultFeeBasisPoints = newFeeBasisPoints;
     }
 }

@@ -1,6 +1,0 @@
-StakingVaultV0Test:test_RevertWhen_stakerCreatesSecondVault() (gas: 318378)
-StakingVaultV0Test:test_constructionOfTheImplementationContract() (gas: 23647)
-StakingVaultV0Test:test_constructionOfTheImplementationContract() (gas: 23690)
-StakingVaultV0Test:test_initializationOfAProxyContract() (gas: 344620)
-StakingVaultV0Test:test_stakersVaultsDontInterfereWithEachOther() (gas: 617695)
-StakingVaultV0Test:test_updatesToOperatorsAndFeeRecipients() (gas: 366360)

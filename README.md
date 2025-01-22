@@ -77,6 +77,8 @@ npm install
 For static analysis, [Slither](https://github.com/crytic/slither) is used to perform automated security analysis on the smart contracts.
 
 ```shell
+python3.13 -m venv venv
+source venv/bin/activate
 pip3 install slither-analyzer
 ```
 
@@ -233,7 +235,7 @@ export ETHDO_CONFIG_WITHDRAWAL_ADDRESS=$WITHDRAWAL_ADDRESS
 
 ethdo wallet create --wallet="${ETHDO_CONFIG_WALLET}" --type="hd" --wallet-passphrase="${ETHDO_CONFIG_PASSPHRASE}" --mnemonic="${ETHDO_CONFIG_MNEMONIC}" --allow-weak-passphrases
 
-for ETHDO_VALIDATOR_INDEX in {1..2}
+for ETHDO_VALIDATOR_INDEX in {1..10}
 do
     ethdo account create --account="${ETHDO_CONFIG_WALLET}/Validators/${ETHDO_VALIDATOR_INDEX}" --wallet-passphrase="${ETHDO_CONFIG_PASSPHRASE}" --passphrase="${ETHDO_CONFIG_PASSPHRASE}" --allow-weak-passphrases --path="m/12381/3600/${ETHDO_VALIDATOR_INDEX}/0/0"
     ethdo validator depositdata --validatoraccount="${ETHDO_CONFIG_WALLET}/Validators/${ETHDO_VALIDATOR_INDEX}" --depositvalue="32Ether" --withdrawaladdress="${ETHDO_CONFIG_WITHDRAWAL_ADDRESS}" --passphrase="${ETHDO_CONFIG_PASSPHRASE}" --forkversion="0x10000038" > /tmp/local-validator-depositdata-${ETHDO_VALIDATOR_INDEX}.json
@@ -537,3 +539,31 @@ sequenceDiagram
 ```
 
 UUPS comes from ERC-1822, which first documented the pattern.
+
+# EIP-7002
+
+This directory contains the [geas](https://github.com/fjl/geas) implementation of [EIP-7002](https://eips.ethereum.org/EIPS/eip-7002).
+
+Original source: https://github.com/lightclient/sys-asm/blob/main/src/withdrawals/main.eas
+Taken from commit `e5d197005661481f7b83f189e183949eaa2d3ae5`
+The official audit references this repository: https://github.com/ethereum/requests-for-proposals/blob/master/open-rfps/pectra-system-contracts-audit.md
+Compile with: `geas lib/eip-7002/main.eas`
+
+# EIP-7251
+
+Increase the MAX_EFFECTIVE_BALANCE
+
+This contract does not make use of `0x02` withdrawal credentials, but explicitly encodes `0x01` withdrawal credentials in the contract. Therefore, compounding is not used. Compound requests have to be sent by the address encoded in the withdrawal credential, i.e., instances of the staking vault, which doesn't implement this feature.
+
+# Limitations
+
+Withdrawable principal takes precedence. In case of triggering an exit, rewards and fees present in the vault are temporarily "locked" by being allocated towards being withdrawn as principal.
+Once swept off the balance of the exited validator, fees and rewards can be claimed as usual.
+Known limitation.
+In the worst case, a malicious staker would continuously exit validators, therefore block us from claiming fees.
+
+            // TODO: Check pubkey is not already registered
+
+            // TODO: Check pubkey is not already exited
+
+            // TODO: Validate that the validator has never been "used" before

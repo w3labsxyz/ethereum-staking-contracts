@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import {ReentrancyGuardTransientUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardTransientUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {IDepositContract} from "@ethereum/beacon-deposit-contract/IDepositContract.sol";
 
@@ -15,6 +16,7 @@ import {IDepositContract} from "@ethereum/beacon-deposit-contract/IDepositContra
 contract StakingVaultV0 is
     Initializable,
     AccessControlUpgradeable,
+    ReentrancyGuardTransientUpgradeable,
     UUPSUpgradeable
 {
     /*
@@ -26,6 +28,9 @@ contract StakingVaultV0 is
 
     /// @dev Role for the staker
     bytes32 public constant STAKER_ROLE = keccak256("STAKER_ROLE");
+
+    /// @dev Role for depositors
+    bytes32 public constant DEPOSITOR_ROLE = keccak256("DEPOSITOR_ROLE");
 
     /// @dev Fees can not exceed 100%
     uint256 private constant MAX_BASIS_POINTS = 10_000;
@@ -56,6 +61,10 @@ contract StakingVaultV0 is
 
     error InvalidFeeBasisPoints(uint256 feeBasisPoints);
 
+    error ZeroAddress();
+
+    error InvalidRoleRemoval();
+
     /*
      * Contract lifecycle
      */
@@ -66,12 +75,16 @@ contract StakingVaultV0 is
     }
 
     /// @notice Initialize instances of this contract
-    function initialize_v0(
+    function initializeV0(
         address payable newOperator,
         address payable newFeeRecipient,
         address payable newStaker,
         uint256 newFeeBasisPoints
-    ) public initializer {
+    ) external initializer {
+        if (newOperator == address(0)) revert ZeroAddress();
+        if (newFeeRecipient == address(0)) revert ZeroAddress();
+        if (newStaker == address(0)) revert ZeroAddress();
+
         __AccessControl_init();
         __UUPSUpgradeable_init();
 
@@ -82,9 +95,11 @@ contract StakingVaultV0 is
 
         _staker = newStaker;
         _grantRole(STAKER_ROLE, _staker);
+        _grantRole(DEPOSITOR_ROLE, _staker);
 
         if (newFeeBasisPoints > MAX_BASIS_POINTS)
             revert InvalidFeeBasisPoints(newFeeBasisPoints);
+
         _feeBasisPoints = newFeeBasisPoints;
 
         if (block.chainid == 1) {
@@ -114,7 +129,8 @@ contract StakingVaultV0 is
     /// @notice Update the address of the operator
     function setOperator(
         address payable newOperator
-    ) public onlyRole(OPERATOR_ROLE) {
+    ) external onlyRole(OPERATOR_ROLE) {
+        if (newOperator == address(0)) revert ZeroAddress();
         _revokeRole(OPERATOR_ROLE, _operator);
         _grantRole(OPERATOR_ROLE, newOperator);
         _operator = newOperator;
@@ -123,8 +139,27 @@ contract StakingVaultV0 is
     /// @notice Update the address of the fee recipient
     function setFeeRecipient(
         address payable newFeeRecipient
-    ) public onlyRole(OPERATOR_ROLE) {
+    ) external onlyRole(OPERATOR_ROLE) {
+        if (newFeeRecipient == address(0)) revert ZeroAddress();
         _feeRecipient = newFeeRecipient;
+    }
+
+    /// @notice Add additional depositors to the allowlist
+    function addDepositor(
+        address payable depositor
+    ) external onlyRole(STAKER_ROLE) {
+        if (depositor == address(0)) revert ZeroAddress();
+        _grantRole(DEPOSITOR_ROLE, depositor);
+    }
+
+    /// @notice Remove depositors from the allowlist
+    /// @dev Can't remove the staker from the allowlist
+    function removeDepositor(
+        address payable depositor
+    ) external onlyRole(STAKER_ROLE) {
+        if (depositor == address(0)) revert ZeroAddress();
+        if (depositor == _staker) revert InvalidRoleRemoval();
+        _revokeRole(DEPOSITOR_ROLE, depositor);
     }
 
     /*
@@ -132,27 +167,32 @@ contract StakingVaultV0 is
      */
 
     /// @notice Get the address of the operator
-    function operator() public view returns (address) {
+    function operator() external view returns (address) {
         return _operator;
     }
 
     /// @notice Get the address of the fee recipient
-    function feeRecipient() public view returns (address) {
+    function feeRecipient() external view returns (address) {
         return _feeRecipient;
     }
 
     /// @notice Get the address of the staker
-    function staker() public view returns (address) {
+    function staker() external view returns (address) {
         return _staker;
     }
 
+    /// @notice Check whether an address is a depositor
+    function isDepositor(address depositor) external view returns (bool) {
+        return hasRole(DEPOSITOR_ROLE, depositor);
+    }
+
     /// @notice Get the fee basis points
-    function feeBasisPoints() public view returns (uint256) {
+    function feeBasisPoints() external view returns (uint256) {
         return _feeBasisPoints;
     }
 
     /// @notice Get the address of the beacon chain deposit contract
-    function depositContractAddress() public view returns (IDepositContract) {
+    function depositContractAddress() external view returns (IDepositContract) {
         return _depositContractAddress;
     }
 }
