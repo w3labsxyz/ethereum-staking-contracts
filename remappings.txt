@@ -1,5 +1,6 @@
 forge-std/=lib/forge-std/src/
-@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/
 @ethereum/consensus-specs/=lib/consensus-specs/
 @ethereum/beacon-deposit-contract/=lib/beacon-deposit-contract/
 @eips/7002/=lib/sys-asm/src/withdrawals/
+@openzeppelin/contracts/=lib/openzeppelin-contracts-upgradeable/lib/openzeppelin-contracts/contracts/
+@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/contracts/
