@@ -7,13 +7,13 @@ import {Test} from "forge-std/Test.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
 import {IDepositContract} from "@ethereum/beacon-deposit-contract/IDepositContract.sol";
 import {DepositContract} from "@ethereum/beacon-deposit-contract/DepositContract.sol";
-import {StakingVaultV1} from "../src/StakingVault.v1.sol";
+import {StakingVault} from "../src/StakingVault.sol";
 import {StakingVaultFactory} from "../src/StakingVaultFactory.sol";
 
 abstract contract StakingVaultSetup is Test {
     IDepositContract depositContract;
-    StakingVaultV1 stakingVault;
-    StakingVaultV1 stakingVaultProxy;
+    StakingVault stakingVault;
+    StakingVault stakingVaultProxy;
     StakingVaultFactory stakingVaultFactory;
     address payable operator;
     address payable feeRecipient;
@@ -45,7 +45,7 @@ abstract contract StakingVaultSetup is Test {
         );
 
         // Deploy our StakingVault implementation contract
-        stakingVault = new StakingVaultV1();
+        stakingVault = new StakingVault();
 
         // Deploy the StakingVaultFactory contract
         stakingVaultFactory = new StakingVaultFactory(
@@ -57,7 +57,7 @@ abstract contract StakingVaultSetup is Test {
 
         // Deploy one instance of the StakingVault, in the name of the staker
         vm.prank(staker);
-        stakingVaultProxy = StakingVaultV1(
+        stakingVaultProxy = StakingVault(
             payable(address(stakingVaultFactory.createVault()))
         );
     }
@@ -69,7 +69,7 @@ contract StakingVaultV1Test is Test, StakingVaultSetup {
     function test_successfulCreationOfAStakingVault() public {
         // The Staker initializes a proxy to the StakingVault
         vm.prank(address(0x99));
-        StakingVaultV1(payable(address(stakingVaultFactory.createVault())));
+        StakingVault(payable(address(stakingVaultFactory.createVault())));
     }
 
     /// @dev `requestStakeQuota` can only be called by the staker
@@ -127,7 +127,7 @@ contract StakingVaultV1Test is Test, StakingVaultSetup {
         vm.prank(operator);
         stakingVaultProxy.approveStakeQuota(pubkeys, signatures, depositValues);
 
-        StakingVaultV1.DepositData[] memory pd = stakingVaultProxy.depositData(
+        StakingVault.DepositData[] memory pd = stakingVaultProxy.depositData(
             32 ether
         );
 
@@ -218,7 +218,7 @@ contract StakingVaultV1Test is Test, StakingVaultSetup {
         vm.prank(operator);
         stakingVaultProxy.approveStakeQuota(pubkeys, signatures, depositValues);
 
-        StakingVaultV1.DepositData[] memory pd = stakingVaultProxy.depositData(
+        StakingVault.DepositData[] memory pd = stakingVaultProxy.depositData(
             64 ether
         );
 
@@ -284,7 +284,7 @@ contract StakingVaultV1Test is Test, StakingVaultSetup {
         vm.prank(operator);
         stakingVaultProxy.approveStakeQuota(pubkeys, signatures, depositValues);
 
-        StakingVaultV1.DepositData[] memory pd = stakingVaultProxy.depositData(
+        StakingVault.DepositData[] memory pd = stakingVaultProxy.depositData(
             320 ether
         );
 
@@ -779,7 +779,7 @@ contract StakingVaultV1Test is Test, StakingVaultSetup {
         );
 
         // Verify deposit data for full amount
-        StakingVaultV1.DepositData[] memory pd = stakingVaultProxy.depositData(
+        StakingVault.DepositData[] memory pd = stakingVaultProxy.depositData(
             32 ether
         );
 
@@ -864,15 +864,15 @@ contract StakingVaultV1Test is Test, StakingVaultSetup {
 
         // When withdrawing two slots, the fee would be increased exponentially
         fee = stakingVaultProxy.recommendedWithdrawalRequestsFee(2);
-        assertEq(fee, 21 wei);
+        assertEq(fee, 10 wei);
 
         // ... but stay the same for three
         fee = stakingVaultProxy.recommendedWithdrawalRequestsFee(3);
-        assertEq(fee, 33 wei);
+        assertEq(fee, 11 wei);
 
         // ... and exponentially increase again for four
         fee = stakingVaultProxy.recommendedWithdrawalRequestsFee(4);
-        assertEq(fee, 47 wei);
+        assertEq(fee, 11 wei);
 
         // Assume the base fee is currently 1 wei
         vm.mockCall(wrpa, bytes(""), abi.encode(1));

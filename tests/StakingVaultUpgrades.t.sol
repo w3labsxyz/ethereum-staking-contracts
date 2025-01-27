@@ -1,16 +1,16 @@
 pragma solidity 0.8.28;
 
-import { Test } from "forge-std/Test.sol";
+import {Test} from "forge-std/Test.sol";
 
-import { IAccessControl } from "@openzeppelin/contracts/access/IAccessControl.sol";
-import { IDepositContract } from "@ethereum/beacon-deposit-contract/IDepositContract.sol";
-import { DepositContract } from "@ethereum/beacon-deposit-contract/DepositContract.sol";
-import { StakingVaultV0 } from "../src/StakingVault.v0.sol";
-import { StakingVaultFactory } from "../src/StakingVaultFactory.sol";
+import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
+import {IDepositContract} from "@ethereum/beacon-deposit-contract/IDepositContract.sol";
+import {DepositContract} from "@ethereum/beacon-deposit-contract/DepositContract.sol";
+import {StakingVault} from "../src/StakingVault.sol";
+import {StakingVaultFactory} from "../src/StakingVaultFactory.sol";
 
 contract StakingVaultV0Test is Test {
     IDepositContract depositContract;
-    StakingVaultV0 stakingVault;
+    StakingVault stakingVault;
     StakingVaultFactory stakingVaultFactory;
     address payable operator;
     address payable feeRecipient;
@@ -28,17 +28,25 @@ contract StakingVaultV0Test is Test {
         // the commonly used address 0x4242424242424242424242424242424242424242
         address dci = address(new DepositContract());
         vm.etch(address(0x4242424242424242424242424242424242424242), dci.code);
-        depositContract = IDepositContract(address(0x4242424242424242424242424242424242424242));
+        depositContract = IDepositContract(
+            address(0x4242424242424242424242424242424242424242)
+        );
 
-        stakingVault = new StakingVaultV0();
+        stakingVault = new StakingVault();
 
-        stakingVaultFactory = new StakingVaultFactory(stakingVault, operator, feeRecipient, feeBasisPoints);
+        stakingVaultFactory = new StakingVaultFactory(
+            stakingVault,
+            operator,
+            feeRecipient,
+            feeBasisPoints
+        );
     }
 
     /// @dev Test the initial construction of the implementation contract
     function test_constructionOfTheImplementationContract() public view {
         // Expect the implementation contract state to be empty before initialization
-        IDepositContract storedDepositContract = stakingVault.depositContractAddress();
+        IDepositContract storedDepositContract = stakingVault
+            .depositContractAddress();
         assertEq(address(storedDepositContract), address(0x0));
         assertEq(stakingVault.operator(), address(0x0));
         assertEq(stakingVault.feeRecipient(), address(0x0));
@@ -50,7 +58,9 @@ contract StakingVaultV0Test is Test {
     function test_initializationOfAProxyContract() public {
         // The Staker initializes a proxy to the StakingVault
         vm.prank(staker);
-        StakingVaultV0 stakingVaultProxy = StakingVaultV0(stakingVaultFactory.createVault());
+        StakingVault stakingVaultProxy = StakingVault(
+            stakingVaultFactory.createVault()
+        );
 
         // The proxy has another address than the implementation
         assertNotEq(address(stakingVault), address(stakingVaultProxy));
@@ -62,7 +72,8 @@ contract StakingVaultV0Test is Test {
         assertEq(stakingVaultProxy.feeBasisPoints(), feeBasisPoints);
 
         // The depositContractAddress is correctly set for the proxy
-        IDepositContract storedDepositContract = stakingVaultProxy.depositContractAddress();
+        IDepositContract storedDepositContract = stakingVaultProxy
+            .depositContractAddress();
         assertEq(address(storedDepositContract), address(depositContract));
 
         // State updates only apply to the proxy, i.e., they do not
@@ -79,11 +90,16 @@ contract StakingVaultV0Test is Test {
         vm.startPrank(staker);
 
         // The staker does not yet have a vault
-        assertEq(address(stakingVaultFactory.vaultForAddress(staker)), address(0x0));
+        assertEq(
+            address(stakingVaultFactory.vaultForAddress(staker)),
+            address(0x0)
+        );
 
         // The first call to createVault should succeed
         stakingVaultFactory.createVault();
-        StakingVaultV0 stakingVaultInstance = stakingVaultFactory.vaultForAddress(staker);
+        StakingVault stakingVaultInstance = stakingVaultFactory.vaultForAddress(
+            staker
+        );
         assertNotEq(address(stakingVaultInstance), address(0x0));
 
         // The second call to createVault should revert because the staker does already have a vault
@@ -100,11 +116,15 @@ contract StakingVaultV0Test is Test {
 
         // Initialize a StakingVault for Staker #1
         vm.prank(staker1);
-        StakingVaultV0 stakingVaultProxy1 = StakingVaultV0(stakingVaultFactory.createVault());
+        StakingVault stakingVaultProxy1 = StakingVault(
+            stakingVaultFactory.createVault()
+        );
 
         // Initialize a StakingVault for Staker #2
         vm.prank(staker2);
-        StakingVaultV0 stakingVaultProxy2 = StakingVaultV0(stakingVaultFactory.createVault());
+        StakingVault stakingVaultProxy2 = StakingVault(
+            stakingVaultFactory.createVault()
+        );
 
         // The staker is set for each stakingVaultProxy individually
         assertEq(stakingVaultProxy1.staker(), staker1);
@@ -123,7 +143,9 @@ contract StakingVaultV0Test is Test {
     function test_updatesToOperatorsAndFeeRecipients() public {
         // A Staker initializes a proxy to the StakingVault
         vm.prank(staker);
-        StakingVaultV0 stakingVaultProxy = StakingVaultV0(stakingVaultFactory.createVault());
+        StakingVault stakingVaultProxy = StakingVault(
+            stakingVaultFactory.createVault()
+        );
 
         // The feeRecipient and operator are the same for the proxy and the implementation
         assertEq(stakingVaultProxy.operator(), operator);
@@ -155,7 +177,9 @@ contract StakingVaultV0Test is Test {
 
         vm.prank(operator);
         // The previous operator is not anymore permitted to apply updates
-        vm.expectPartialRevert(IAccessControl.AccessControlUnauthorizedAccount.selector);
+        vm.expectPartialRevert(
+            IAccessControl.AccessControlUnauthorizedAccount.selector
+        );
         stakingVaultProxy.setFeeRecipient(newFeeRecipient);
 
         // But the new operator can apply updates

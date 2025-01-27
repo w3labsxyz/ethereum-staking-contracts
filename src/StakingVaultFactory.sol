@@ -3,15 +3,15 @@ pragma solidity 0.8.28;
 
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {ReentrancyGuardTransientUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardTransientUpgradeable.sol";
-import {StakingVaultV0} from "./StakingVault.v0.sol";
+import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
+import {StakingVault} from "./StakingVault.sol";
 
-contract StakingVaultFactory is Ownable, ReentrancyGuardTransientUpgradeable {
+contract StakingVaultFactory is Ownable, ReentrancyGuardTransient {
     /// @dev The address of the StakingVault implementation contract
-    StakingVaultV0 private immutable _stakingVault;
+    StakingVault private immutable _stakingVault;
 
     /// @dev The StakingVault contract instances by owner
-    mapping(address => StakingVaultV0) private _vaultsByOwner;
+    mapping(address => StakingVault) private _vaultsByOwner;
 
     /// @dev The default address of the node operator used for new vaults
     address payable private _defaultOperator;
@@ -39,13 +39,11 @@ contract StakingVaultFactory is Ownable, ReentrancyGuardTransientUpgradeable {
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(
-        StakingVaultV0 newStakingVault,
+        StakingVault newStakingVault,
         address payable newOperator,
         address payable newFeeRecipient,
         uint256 newFeeBasisPoints
     ) Ownable(msg.sender) {
-        _disableInitializers();
-
         if (address(newStakingVault) == address(0))
             revert ImplementationZeroAddress();
 
@@ -59,13 +57,13 @@ contract StakingVaultFactory is Ownable, ReentrancyGuardTransientUpgradeable {
     }
 
     /// @notice Create a new proxy to the StakingVault
-    function createVault() external nonReentrant returns (address) {
+    function createVault() external nonReentrant returns (StakingVault) {
         if (hasVault(msg.sender)) revert OneVaultPerAddress();
 
         ERC1967Proxy proxy = new ERC1967Proxy(
             address(_stakingVault),
             abi.encodeWithSelector(
-                StakingVaultV0.initializeV0.selector,
+                StakingVault.initialize.selector,
                 _defaultOperator,
                 _defaultFeeRecipient,
                 msg.sender,
@@ -73,11 +71,12 @@ contract StakingVaultFactory is Ownable, ReentrancyGuardTransientUpgradeable {
             )
         );
 
-        _vaultsByOwner[msg.sender] = StakingVaultV0(address(proxy));
+        StakingVault vault = StakingVault(payable(address(proxy)));
+        _vaultsByOwner[msg.sender] = vault;
 
         emit VaultCreated(msg.sender, address(proxy));
 
-        return address(proxy);
+        return vault;
     }
 
     /*
@@ -85,14 +84,14 @@ contract StakingVaultFactory is Ownable, ReentrancyGuardTransientUpgradeable {
      */
 
     /// @notice Get the address of the StakingVault implementation contract
-    function stakingVault() public view returns (StakingVaultV0) {
+    function stakingVault() public view returns (StakingVault) {
         return _stakingVault;
     }
 
     /// @notice Get the address of the StakingVault of a specific owner
     function vaultForAddress(
         address staker
-    ) public view returns (StakingVaultV0) {
+    ) public view returns (StakingVault) {
         return _vaultsByOwner[staker];
     }
 
