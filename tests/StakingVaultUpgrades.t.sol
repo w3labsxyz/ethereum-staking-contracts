@@ -1,17 +1,34 @@
 pragma solidity 0.8.28;
 
-import {Test} from "forge-std/Test.sol";
+import { Test } from "forge-std/Test.sol";
 
-import {IAccessControl} from "@openzeppelin/contracts/access/IAccessControl.sol";
-import {IDepositContract} from "@ethereum/beacon-deposit-contract/IDepositContract.sol";
-import {DepositContract} from "@ethereum/beacon-deposit-contract/DepositContract.sol";
-import {StakingVault} from "../src/StakingVault.sol";
-import {StakingVaultFactory} from "../src/StakingVaultFactory.sol";
+import { IAccessControl } from "@openzeppelin/contracts/access/IAccessControl.sol";
+import { IDepositContract } from "@ethereum/beacon-deposit-contract/IDepositContract.sol";
+import { DepositContract } from "@ethereum/beacon-deposit-contract/DepositContract.sol";
+import { StakingVault } from "../src/StakingVault.sol";
+import { StakingHub } from "../src/StakingHub.sol";
+import { EIP7002 } from "../src/EIP7002.sol";
 
-contract StakingVaultV0Test is Test {
+contract StakingVaultV2 is StakingVault {
+    /// @dev Initialize the upgraded implementation contract
+    function initializeV2(uint256 newFeeBasisPoints) external reinitializer(2) {
+        _feeBasisPoints = newFeeBasisPoints;
+
+        // @dev Override the eip-7002 address
+        _withdrawalRequestPredeployAddress = address(0xabcd);
+    }
+
+    /// @dev Override
+    function recommendedWithdrawalRequestsFee(uint256 numberOfWithdrawalRequests) external override returns (uint256) {
+        return 2 * _recommendedWithdrawalRequestsFee(numberOfWithdrawalRequests);
+    }
+}
+
+contract StakingVaultUpgradesTest is Test {
     IDepositContract depositContract;
     StakingVault stakingVault;
-    StakingVaultFactory stakingVaultFactory;
+    StakingVaultV2 stakingVaultV2;
+    StakingHub stakingHub;
     address payable operator;
     address payable feeRecipient;
     address payable staker;
@@ -28,174 +45,49 @@ contract StakingVaultV0Test is Test {
         // the commonly used address 0x4242424242424242424242424242424242424242
         address dci = address(new DepositContract());
         vm.etch(address(0x4242424242424242424242424242424242424242), dci.code);
-        depositContract = IDepositContract(
-            address(0x4242424242424242424242424242424242424242)
-        );
+        depositContract = IDepositContract(address(0x4242424242424242424242424242424242424242));
 
         stakingVault = new StakingVault();
 
-        stakingVaultFactory = new StakingVaultFactory(
-            stakingVault,
-            operator,
-            feeRecipient,
-            feeBasisPoints
-        );
+        stakingHub = new StakingHub(stakingVault, operator, feeRecipient, feeBasisPoints);
     }
 
-    /// @dev Test the initial construction of the implementation contract
-    function test_constructionOfTheImplementationContract() public view {
-        // Expect the implementation contract state to be empty before initialization
-        IDepositContract storedDepositContract = stakingVault
-            .depositContractAddress();
-        assertEq(address(storedDepositContract), address(0x0));
-        assertEq(stakingVault.operator(), address(0x0));
-        assertEq(stakingVault.feeRecipient(), address(0x0));
-        assertEq(stakingVault.staker(), address(0x0));
-        assertEq(stakingVault.feeBasisPoints(), 0);
-    }
+    /// @dev Test the upgradeability of the staking vault
+    function test_upgrade() public {
+        // Deploy the EIP-7002 contract to 0xabcd
+        string[] memory inputs = new string[](2);
+        inputs[0] = "geas";
+        inputs[1] = "lib/sys-asm/src/withdrawals/main.eas";
+        bytes memory eip7002Bytecode = vm.ffi(inputs);
+        vm.etch(address(0xabcd), eip7002Bytecode);
 
-    /// @dev Test the initialization of proxy contracts
-    function test_initializationOfAProxyContract() public {
-        // The Staker initializes a proxy to the StakingVault
+        // Deploy one instance of the StakingVault, in the name of the staker
         vm.prank(staker);
-        StakingVault stakingVaultProxy = StakingVault(
-            stakingVaultFactory.createVault()
-        );
+        StakingVault stakingVaultProxy = stakingHub.createVault(0);
 
-        // The proxy has another address than the implementation
-        assertNotEq(address(stakingVault), address(stakingVaultProxy));
+        assertEq(stakingVaultProxy.feeBasisPoints(), 1000);
 
-        // The staker, feeRecipient, and operator are the same for the proxy
-        assertEq(stakingVaultProxy.staker(), staker);
-        assertEq(stakingVaultProxy.operator(), operator);
-        assertEq(stakingVaultProxy.feeRecipient(), feeRecipient);
-        assertEq(stakingVaultProxy.feeBasisPoints(), feeBasisPoints);
+        // The following reverts because the staking vault proxy does not yet
+        // point to eip-7002 at 0xabcd
+        vm.expectRevert(EIP7002.EIP7002ContractNotDeployed.selector);
+        stakingVaultProxy.recommendedWithdrawalRequestsFee(1);
 
-        // The depositContractAddress is correctly set for the proxy
-        IDepositContract storedDepositContract = stakingVaultProxy
-            .depositContractAddress();
-        assertEq(address(storedDepositContract), address(depositContract));
+        stakingVaultV2 = new StakingVaultV2();
 
-        // State updates only apply to the proxy, i.e., they do not
-        // affect the implementation contract but only the proxy
-        storedDepositContract = stakingVault.depositContractAddress();
-        assertEq(address(storedDepositContract), address(0x0));
-        assertEq(stakingVault.operator(), address(0x0));
-        assertEq(stakingVault.feeRecipient(), address(0x0));
-        assertEq(stakingVault.staker(), address(0x0));
-    }
-
-    /// @dev Stakers can create at most one vault
-    function test_RevertWhen_stakerCreatesSecondVault() public {
-        vm.startPrank(staker);
-
-        // The staker does not yet have a vault
-        assertEq(
-            address(stakingVaultFactory.vaultForAddress(staker)),
-            address(0x0)
-        );
-
-        // The first call to createVault should succeed
-        stakingVaultFactory.createVault();
-        StakingVault stakingVaultInstance = stakingVaultFactory.vaultForAddress(
-            staker
-        );
-        assertNotEq(address(stakingVaultInstance), address(0x0));
-
-        // The second call to createVault should revert because the staker does already have a vault
-        vm.expectRevert(StakingVaultFactory.OneVaultPerAddress.selector);
-        stakingVaultFactory.createVault();
-
-        vm.stopPrank();
-    }
-
-    /// @dev Test that the proxies of multiple stakers don't interfere with each other
-    function test_stakersVaultsDontInterfereWithEachOther() public {
-        address payable staker1 = payable(address(0x11));
-        address payable staker2 = payable(address(0x12));
-
-        // Initialize a StakingVault for Staker #1
-        vm.prank(staker1);
-        StakingVault stakingVaultProxy1 = StakingVault(
-            stakingVaultFactory.createVault()
-        );
-
-        // Initialize a StakingVault for Staker #2
-        vm.prank(staker2);
-        StakingVault stakingVaultProxy2 = StakingVault(
-            stakingVaultFactory.createVault()
-        );
-
-        // The staker is set for each stakingVaultProxy individually
-        assertEq(stakingVaultProxy1.staker(), staker1);
-        assertEq(stakingVaultProxy2.staker(), staker2);
-
-        // Updating the feeRecipient in one proxy does not affect the other
-        address payable newFeeRecipient = payable(address(0x13));
+        // The operator may not upgrade the contract
         vm.prank(operator);
-        stakingVaultProxy1.setFeeRecipient(newFeeRecipient);
-        assertEq(stakingVaultProxy1.feeRecipient(), newFeeRecipient);
-        assertEq(stakingVaultProxy2.feeRecipient(), feeRecipient);
-    }
+        vm.expectRevert();
+        stakingVaultProxy.upgradeToAndCall(
+            address(stakingVaultV2), abi.encodeWithSelector(StakingVaultV2.initializeV2.selector, 900)
+        );
 
-    /// @dev Test that updates to operators and feeRecipients in the
-    /// implmentation contract are reflected in the proxies as well
-    function test_updatesToOperatorsAndFeeRecipients() public {
-        // A Staker initializes a proxy to the StakingVault
+        // Upgrade the proxy to the new implementation
         vm.prank(staker);
-        StakingVault stakingVaultProxy = StakingVault(
-            stakingVaultFactory.createVault()
+        stakingVaultProxy.upgradeToAndCall(
+            address(stakingVaultV2), abi.encodeWithSelector(StakingVaultV2.initializeV2.selector, 900)
         );
 
-        // The feeRecipient and operator are the same for the proxy and the implementation
-        assertEq(stakingVaultProxy.operator(), operator);
-        assertEq(stakingVaultProxy.feeRecipient(), feeRecipient);
-
-        // Update the default operator and feeRecipient in the factory contract
-        address payable newOperator = payable(address(0x11));
-        address payable newFeeRecipient = payable(address(0x12));
-        stakingVaultFactory.setDefaultOperator(newOperator);
-        stakingVaultFactory.setDefaultFeeRecipient(newFeeRecipient);
-
-        // The default operator and feeRecipient in the factory contract are updated
-        assertEq(stakingVaultFactory.defaultOperator(), newOperator);
-        assertEq(stakingVaultFactory.defaultFeeRecipient(), newFeeRecipient);
-
-        // The operator and feeRecipient in the implementation contract are not
-        // affected by an update to the defaults in the factory contract
-        assertEq(stakingVault.operator(), address(0x0));
-        assertEq(stakingVault.feeRecipient(), address(0x0));
-
-        // The operator and feeRecipient in the proxy have not changed
-        assertEq(stakingVaultProxy.operator(), operator);
-        assertEq(stakingVaultProxy.feeRecipient(), feeRecipient);
-
-        // Updating the operator and feeRecipient in the proxy contract
-        // can be done by the operator in the proxy contract directly
-        vm.prank(operator);
-        stakingVaultProxy.setOperator(newOperator);
-
-        vm.prank(operator);
-        // The previous operator is not anymore permitted to apply updates
-        vm.expectPartialRevert(
-            IAccessControl.AccessControlUnauthorizedAccount.selector
-        );
-        stakingVaultProxy.setFeeRecipient(newFeeRecipient);
-
-        // But the new operator can apply updates
-        vm.prank(newOperator);
-        stakingVaultProxy.setFeeRecipient(newFeeRecipient);
-
-        // The operator and feeRecipient in the proxy have been updated
-        assertEq(stakingVaultProxy.operator(), newOperator);
-        assertEq(stakingVaultProxy.feeRecipient(), newFeeRecipient);
-        // While the values in the implementation contract and inside of the
-        // factory remain untouched
-        assertEq(stakingVaultFactory.defaultOperator(), newOperator);
-        assertEq(stakingVaultFactory.defaultFeeRecipient(), newFeeRecipient);
-        assertEq(stakingVault.operator(), address(0x0));
-        assertEq(stakingVault.feeRecipient(), address(0x0));
+        assertEq(stakingVaultProxy.feeBasisPoints(), 900);
+        assertEq(stakingVaultProxy.recommendedWithdrawalRequestsFee(1), 2);
     }
 }
-
-// TODO: Test invalid fee basis points

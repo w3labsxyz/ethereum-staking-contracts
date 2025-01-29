@@ -1,6 +1,7 @@
 # Compiler files
 cache/
 out/
+coverage/
 
 # Ignores development broadcast logs
 broadcast/
@@ -13,3 +14,6 @@ docs/
 
 # Python
 .venv
+
+# Node
+node_modules/

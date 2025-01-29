@@ -1,0 +1,428 @@
+{
+  "vectors": [
+    {
+      "numberOfWithdrawalRequests": 1,
+      "baseExcess": 1,
+      "baseFee": 1,
+      "expectedFee": 1
+    },
+    {
+      "numberOfWithdrawalRequests": 2,
+      "baseExcess": 1,
+      "baseFee": 1,
+      "expectedFee": 2
+    },
+    {
+      "numberOfWithdrawalRequests": 8,
+      "baseExcess": 1,
+      "baseFee": 1,
+      "expectedFee": 8
+    },
+    {
+      "numberOfWithdrawalRequests": 16,
+      "baseExcess": 1,
+      "baseFee": 1,
+      "expectedFee": 16
+    },
+    {
+      "numberOfWithdrawalRequests": 32,
+      "baseExcess": 1,
+      "baseFee": 1,
+      "expectedFee": 32
+    },
+    {
+      "numberOfWithdrawalRequests": 64,
+      "baseExcess": 1,
+      "baseFee": 1,
+      "expectedFee": 64
+    },
+    {
+      "numberOfWithdrawalRequests": 100,
+      "baseExcess": 1,
+      "baseFee": 1,
+      "expectedFee": 100
+    },
+    {
+      "numberOfWithdrawalRequests": 1,
+      "baseExcess": 2,
+      "baseFee": 1,
+      "expectedFee": 1
+    },
+    {
+      "numberOfWithdrawalRequests": 2,
+      "baseExcess": 2,
+      "baseFee": 1,
+      "expectedFee": 2
+    },
+    {
+      "numberOfWithdrawalRequests": 8,
+      "baseExcess": 2,
+      "baseFee": 1,
+      "expectedFee": 8
+    },
+    {
+      "numberOfWithdrawalRequests": 16,
+      "baseExcess": 2,
+      "baseFee": 1,
+      "expectedFee": 16
+    },
+    {
+      "numberOfWithdrawalRequests": 32,
+      "baseExcess": 2,
+      "baseFee": 1,
+      "expectedFee": 32
+    },
+    {
+      "numberOfWithdrawalRequests": 64,
+      "baseExcess": 2,
+      "baseFee": 1,
+      "expectedFee": 64
+    },
+    {
+      "numberOfWithdrawalRequests": 100,
+      "baseExcess": 2,
+      "baseFee": 1,
+      "expectedFee": 100
+    },
+    {
+      "numberOfWithdrawalRequests": 1,
+      "baseExcess": 4,
+      "baseFee": 1,
+      "expectedFee": 1
+    },
+    {
+      "numberOfWithdrawalRequests": 2,
+      "baseExcess": 4,
+      "baseFee": 1,
+      "expectedFee": 2
+    },
+    {
+      "numberOfWithdrawalRequests": 8,
+      "baseExcess": 4,
+      "baseFee": 1,
+      "expectedFee": 8
+    },
+    {
+      "numberOfWithdrawalRequests": 16,
+      "baseExcess": 4,
+      "baseFee": 1,
+      "expectedFee": 16
+    },
+    {
+      "numberOfWithdrawalRequests": 32,
+      "baseExcess": 4,
+      "baseFee": 1,
+      "expectedFee": 32
+    },
+    {
+      "numberOfWithdrawalRequests": 64,
+      "baseExcess": 4,
+      "baseFee": 1,
+      "expectedFee": 64
+    },
+    {
+      "numberOfWithdrawalRequests": 100,
+      "baseExcess": 4,
+      "baseFee": 1,
+      "expectedFee": 100
+    },
+    {
+      "numberOfWithdrawalRequests": 1,
+      "baseExcess": 8,
+      "baseFee": 1,
+      "expectedFee": 1
+    },
+    {
+      "numberOfWithdrawalRequests": 2,
+      "baseExcess": 8,
+      "baseFee": 1,
+      "expectedFee": 2
+    },
+    {
+      "numberOfWithdrawalRequests": 8,
+      "baseExcess": 8,
+      "baseFee": 1,
+      "expectedFee": 8
+    },
+    {
+      "numberOfWithdrawalRequests": 16,
+      "baseExcess": 8,
+      "baseFee": 1,
+      "expectedFee": 16
+    },
+    {
+      "numberOfWithdrawalRequests": 32,
+      "baseExcess": 8,
+      "baseFee": 1,
+      "expectedFee": 32
+    },
+    {
+      "numberOfWithdrawalRequests": 64,
+      "baseExcess": 8,
+      "baseFee": 1,
+      "expectedFee": 64
+    },
+    {
+      "numberOfWithdrawalRequests": 100,
+      "baseExcess": 8,
+      "baseFee": 1,
+      "expectedFee": 100
+    },
+    {
+      "numberOfWithdrawalRequests": 1,
+      "baseExcess": 16,
+      "baseFee": 2,
+      "expectedFee": 2
+    },
+    {
+      "numberOfWithdrawalRequests": 2,
+      "baseExcess": 16,
+      "baseFee": 2,
+      "expectedFee": 4
+    },
+    {
+      "numberOfWithdrawalRequests": 8,
+      "baseExcess": 16,
+      "baseFee": 2,
+      "expectedFee": 16
+    },
+    {
+      "numberOfWithdrawalRequests": 16,
+      "baseExcess": 16,
+      "baseFee": 2,
+      "expectedFee": 32
+    },
+    {
+      "numberOfWithdrawalRequests": 32,
+      "baseExcess": 16,
+      "baseFee": 2,
+      "expectedFee": 64
+    },
+    {
+      "numberOfWithdrawalRequests": 64,
+      "baseExcess": 16,
+      "baseFee": 2,
+      "expectedFee": 128
+    },
+    {
+      "numberOfWithdrawalRequests": 100,
+      "baseExcess": 16,
+      "baseFee": 2,
+      "expectedFee": 200
+    },
+    {
+      "numberOfWithdrawalRequests": 1,
+      "baseExcess": 32,
+      "baseFee": 6,
+      "expectedFee": 6
+    },
+    {
+      "numberOfWithdrawalRequests": 2,
+      "baseExcess": 32,
+      "baseFee": 6,
+      "expectedFee": 12
+    },
+    {
+      "numberOfWithdrawalRequests": 8,
+      "baseExcess": 32,
+      "baseFee": 6,
+      "expectedFee": 48
+    },
+    {
+      "numberOfWithdrawalRequests": 16,
+      "baseExcess": 32,
+      "baseFee": 6,
+      "expectedFee": 96
+    },
+    {
+      "numberOfWithdrawalRequests": 32,
+      "baseExcess": 32,
+      "baseFee": 6,
+      "expectedFee": 192
+    },
+    {
+      "numberOfWithdrawalRequests": 64,
+      "baseExcess": 32,
+      "baseFee": 6,
+      "expectedFee": 384
+    },
+    {
+      "numberOfWithdrawalRequests": 100,
+      "baseExcess": 32,
+      "baseFee": 6,
+      "expectedFee": 600
+    },
+    {
+      "numberOfWithdrawalRequests": 1,
+      "baseExcess": 64,
+      "baseFee": 42,
+      "expectedFee": 42
+    },
+    {
+      "numberOfWithdrawalRequests": 2,
+      "baseExcess": 64,
+      "baseFee": 42,
+      "expectedFee": 84
+    },
+    {
+      "numberOfWithdrawalRequests": 8,
+      "baseExcess": 64,
+      "baseFee": 42,
+      "expectedFee": 336
+    },
+    {
+      "numberOfWithdrawalRequests": 16,
+      "baseExcess": 64,
+      "baseFee": 42,
+      "expectedFee": 672
+    },
+    {
+      "numberOfWithdrawalRequests": 32,
+      "baseExcess": 64,
+      "baseFee": 42,
+      "expectedFee": 1344
+    },
+    {
+      "numberOfWithdrawalRequests": 64,
+      "baseExcess": 64,
+      "baseFee": 42,
+      "expectedFee": 2688
+    },
+    {
+      "numberOfWithdrawalRequests": 100,
+      "baseExcess": 64,
+      "baseFee": 42,
+      "expectedFee": 4200
+    },
+    {
+      "numberOfWithdrawalRequests": 1,
+      "baseExcess": 128,
+      "baseFee": 1857,
+      "expectedFee": 1857
+    },
+    {
+      "numberOfWithdrawalRequests": 2,
+      "baseExcess": 128,
+      "baseFee": 1857,
+      "expectedFee": 3714
+    },
+    {
+      "numberOfWithdrawalRequests": 8,
+      "baseExcess": 128,
+      "baseFee": 1857,
+      "expectedFee": 14856
+    },
+    {
+      "numberOfWithdrawalRequests": 16,
+      "baseExcess": 128,
+      "baseFee": 1857,
+      "expectedFee": 29712
+    },
+    {
+      "numberOfWithdrawalRequests": 32,
+      "baseExcess": 128,
+      "baseFee": 1857,
+      "expectedFee": 59424
+    },
+    {
+      "numberOfWithdrawalRequests": 64,
+      "baseExcess": 128,
+      "baseFee": 1857,
+      "expectedFee": 118848
+    },
+    {
+      "numberOfWithdrawalRequests": 100,
+      "baseExcess": 128,
+      "baseFee": 1857,
+      "expectedFee": 185700
+    },
+    {
+      "numberOfWithdrawalRequests": 1,
+      "baseExcess": 256,
+      "baseFee": 3465803,
+      "expectedFee": 3465803
+    },
+    {
+      "numberOfWithdrawalRequests": 2,
+      "baseExcess": 256,
+      "baseFee": 3465803,
+      "expectedFee": 6931606
+    },
+    {
+      "numberOfWithdrawalRequests": 8,
+      "baseExcess": 256,
+      "baseFee": 3465803,
+      "expectedFee": 27726424
+    },
+    {
+      "numberOfWithdrawalRequests": 16,
+      "baseExcess": 256,
+      "baseFee": 3465803,
+      "expectedFee": 55452848
+    },
+    {
+      "numberOfWithdrawalRequests": 32,
+      "baseExcess": 256,
+      "baseFee": 3465803,
+      "expectedFee": 110905696
+    },
+    {
+      "numberOfWithdrawalRequests": 64,
+      "baseExcess": 256,
+      "baseFee": 3465803,
+      "expectedFee": 221811392
+    },
+    {
+      "numberOfWithdrawalRequests": 100,
+      "baseExcess": 256,
+      "baseFee": 3465803,
+      "expectedFee": 346580300
+    },
+    {
+      "numberOfWithdrawalRequests": 1,
+      "baseExcess": 512,
+      "baseFee": 12020397140344,
+      "expectedFee": 12020397140344
+    },
+    {
+      "numberOfWithdrawalRequests": 2,
+      "baseExcess": 512,
+      "baseFee": 12020397140344,
+      "expectedFee": 24040794280688
+    },
+    {
+      "numberOfWithdrawalRequests": 8,
+      "baseExcess": 512,
+      "baseFee": 12020397140344,
+      "expectedFee": 96163177122752
+    },
+    {
+      "numberOfWithdrawalRequests": 16,
+      "baseExcess": 512,
+      "baseFee": 12020397140344,
+      "expectedFee": 192326354245504
+    },
+    {
+      "numberOfWithdrawalRequests": 32,
+      "baseExcess": 512,
+      "baseFee": 12020397140344,
+      "expectedFee": 384652708491008
+    },
+    {
+      "numberOfWithdrawalRequests": 64,
+      "baseExcess": 512,
+      "baseFee": 12020397140344,
+      "expectedFee": 769305416982016
+    },
+    {
+      "numberOfWithdrawalRequests": 100,
+      "baseExcess": 512,
+      "baseFee": 12020397140344,
+      "expectedFee": 1202039714034400
+    }
+  ],
+  "constants": {
+    "MIN_WITHDRAWAL_REQUEST_FEE": 1,
+    "WITHDRAWAL_REQUEST_FEE_UPDATE_FRACTION": 17
+  }
+}

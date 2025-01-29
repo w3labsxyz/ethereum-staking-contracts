@@ -4,13 +4,14 @@
   "description": "Smart contracts for Ethereum Staking with w3.labs.",
   "main": "none",
   "scripts": {
-    "analyze": "slither contracts/lib",
+    "analyze": "slither .",
     "lint": "forge fmt --check && solhint \"{script,src,tests}/**/*.sol\"",
     "fmt": "forge fmt",
     "build": "forge build",
     "test": "forge test",
+    "test:gas-report": "forge test --gas-report",
     "test:coverage": "forge coverage",
-    "test:coverage:report": "forge coverage --report lcov && genhtml lcov.info --branch-coverage --output-dir coverage"
+    "test:coverage:report": "forge coverage --report lcov && genhtml lcov.info --ignore-errors inconsistent --branch-coverage --output-dir coverage"
   },
   "repository": {
     "type": "git",

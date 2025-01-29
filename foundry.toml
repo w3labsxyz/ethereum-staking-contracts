@@ -12,7 +12,10 @@ solc = "0.8.28"
 src = "src"
 test = "tests"
 libs = ["lib"]
-fs_permissions = [{ access = "read", path = "./tests/fixtures" }]
+fs_permissions = [
+    { access = "read", path = "./tests/fixtures" },
+    { access = "read", path = "./scripts/fixtures" },
+]
 ffi = true
 
 [profile.ci]

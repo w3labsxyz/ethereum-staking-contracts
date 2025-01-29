@@ -1,60 +1,151 @@
 # w3.labs Staking Contracts
 
 This repository contains the smart contract code for the w3.labs staking platform.
-Contracts are organized in the [`contracts`](/contracts) directory. [`interfaces`](/contracts/interfaces) implement external interfaces we depend on, [`lib`](/contracts/lib) contains our actual contracts and [`test`](/contracts/test) the mocked contracts for testing.
+Contracts are organized in the [`src`](/src) directory. [`lib`](/lib) contains external interfaces we depend on, managed via git submodules.
+The [`tests`](/tests) and [`scripts](/scripts) directories contain tests and scripts respectively.
 
 The following table lists the networks and respective addresses that the contracts have been deployed to:
 
-| Network | Chain Id | Contract        | Address |
-| ------- | -------- | --------------- | ------- |
-| Mainnet | 1        | Batch Deposit   | [0x]()  |
-| Mainnet | 1        | Staking Rewards | [0x]()  |
-| Holesky | 17000    | Batch Deposit   | [0x]()  |
-| Mainnet | 17000    | Staking Rewards | [0x]()  |
+| Network | Chain Id | Contract                      | Address |
+| ------- | -------- | ----------------------------- | ------- |
+| Mainnet | 1        | StakingHub                    | [0x]()  |
+| Mainnet | 1        | StakingVault (Implementation) | [0x]()  |
+| Holesky | 17000    | StakingHub                    | [0x]()  |
+| Holesky | 17000    | StakingVault (Implementation) | [0x]()  |
 
 ## Contracts
 
-### StakingRewards
+### StakingHub
 
-The w3.labs StakingRewards contract manages the allocation of staking rewards between a staking customer and the platform. The primary contract `StakingRewards.sol` implements a pull-based approach for withdrawing validator rewards and fees respectively. For more information, see `contracts/lib/StakingRewards.sol`.
+The w3.labs StakingHub contract acts as the central hub to creating instances of our StakingVault.
+The notable interface exposed is the `createVault` function, which allows for the creation of a new StakingVault instance.
+We instantiate StakingVaults by creating [`EIP-1967 proxies`](https://eips.ethereum.org/EIPS/eip-1967) pointing to the StakingVault Implementation, thereby following the [`EIP-1822 UUPS standard`](https://eips.ethereum.org/EIPS/eip-1822).
 
-### BatchDeposit
+### StakingVault
 
-The w3.labs BatchDeposit contract enables the deployment of multiple Ethereum validators at once. The `BatchDeposit.sol` contract interacts with the Ethereum staking deposit contract. For more information, see `contracts/lib/BatchDeposit.sol`.
+The w3.labs StakingVault contract enables the deployment of multiple Ethereum validators at once.
+The notable interactions with it are depicted in the following sequence diagram:
 
-Credits also go to [stakefish](https://www.stake.fish) and [abyss](https://www.abyss.finance) who have built their batch depositors in the open:
+```mermaid
+sequenceDiagram
+    actor Staker
+    participant StakingHub Contract
+    participant StakingVault Contract
+    participant Beacon Deposit Contract
+    participant Ethereum Network
+    participant Validator
+    actor w3.labs Consensus
 
-- [stakefish BatchDeposits contract (GitHub)](https://github.com/stakefish/eth2-batch-deposit/blob/main/contracts/BatchDeposits.sol)
-- [Abyss Eth2 Depositor contract (GitHub)](https://github.com/abyssfinance/abyss-eth2depositor/blob/main/contracts/AbyssEth2Depositor.sol)
+    Staker->>StakingHub Contract: Create Vault
+    StakingHub Contract->>StakingVault Contract: Initialize Vault
+    activate StakingVault Contract
+    StakingVault Contract-->>Staker: Vault assigned
+    deactivate StakingVault Contract
+
+    loop Staking phase
+        Staker->>StakingVault Contract: Request Stake Quota
+        w3.labs Consensus->>Validator: Provision Validators
+        w3.labs Consensus->>StakingVault Contract: Allocate Stake Quota
+
+        Staker->>StakingVault Contract: Verify Deposit Data
+        Staker->>StakingVault Contract: Stake
+        StakingVault Contract->>+Beacon Deposit Contract: Forward Stake
+        Note over Beacon Deposit Contract: Wait for Ethereum Network to activate validator
+	end
+
+    loop Active phase
+        Ethereum Network->>Validator: Request Block Attestations & Signings
+        Validator->>Ethereum Network: Sign and Attest Blocks
+        Ethereum Network->>Validator: Increase Validator Balance with Consensus-Rewards
+        Ethereum Network->>Validator: Withdraw Consensus-Rewards every ~4.5 days
+        Ethereum Network->>StakingVault Contract: Credit Consensus-Rewards every ~4.5 days
+		Ethereum Network->>StakingVault Contract: Send Execution-Rewards for signed Blocks
+
+		Staker->>StakingVault Contract: Claim Rewards
+		StakingVault Contract->>Staker: Send Rewards
+
+		w3.labs Consensus->>StakingVault Contract: Claim Fees
+		StakingVault Contract->>w3.labs Consensus: Send Fees
+	end
+
+    Staker->>StakingVault Contract: Request Unbonding
+    StakingVault Contract->>+Ethereum Network: Forward Unbonding Request
+
+    Note over Ethereum Network: Wait for Ethereum Exit Queue
+
+    Validator->>Validator: Stop Validation
+
+    Ethereum Network->>StakingVault Contract: Release Stake & Consensus-Rewards
+
+    Staker->>StakingVault Contract: Claim Rewards
+    StakingVault Contract->>Staker: Send Rewards
+    Staker->>StakingVault Contract: Withdraw Principal
+    StakingVault Contract->>Staker: Send Principal
+
+    w3.labs Consensus->>StakingVault Contract: Claim Fees
+    StakingVault Contract->>w3.labs Consensus: Send Fees
+```
 
 ## Design Decisions
 
-### The Ethereum Validator Exit Process
+### UUPS
 
-The `StakingRewards` contract, specifically the `releasable()` function, incorporates a vital design decision for calculating releasable ETH amounts. This decision is related to the Ethereum validator exit process and its absent interaction with smart contracts.
+As noted above, we are implementing the UUPS standard. The StakingVault is initializable when instantiated via an EIP-1967 proxy. This allows the effective owner of a StakingVault to upgrade their instance of a StakingVault.
 
-#### Ethereum Validator Exit Process
+### Access Control
 
-1. **Exit Message Broadcasting**: A signed exit message is broadcasted to the network when a validator exits. This message indicates the validator's intention to cease operations and initiate the process of exiting.
-2. **Non-Triggering of Smart Contracts**: Crucially, broadcasting a signed exit message in Ethereum does not trigger any smart contract execution. This is because the exit process occurs at the consensus layer of Ethereum, which operates independently of the execution layer where smart contracts reside.
-3. **Implications for Smart Contracts**: When a validator exits, this action can not automatically update relevant states or variables in smart contracts that might depend on the validator's status. This includes the `_exitedStake` variable in the `StakingRewards` contract, which is necessary for accurate reward calculations.
+The StakingVault defined three roles: `staker`, `depositor`, and `operator`
+The `staker` role is the primary role, allowing for:
 
-#### Necessity of `exitValidators()` Function
+- Upgrading the StakingVault
+- Requesting stake quotas
+- Requesting stake unbondings
+- Withdraw principal after unbonding
+- Claim rewards
+- Add addresses to the `depositor` role
+- Act as `depositor`
 
-Given the described separation between the consensus and execution layers in Ethereum, the `StakingRewards` contract requires the `exitValidators()` function to be explicitly called by the reward recipient. This function updates the `_exitedStake` variable, aligning it with the actual state of exited validators.
+The `depositor` role is a secondary role, allowing for:
 
-#### Economic Incentive and Responsibility
+- Depositing, i.e., staking, funds into the StakingVault
 
-1. **Active Engagement**: Reward recipients are incentivized to engage actively by calling `exitValidators()`, ensuring no fees apply to the stake returned after the successful exit of validators.
-2. **Autonomy and Accountability**: This design empowers reward recipients with freedom over their rewards while holding them accountable for maintaining the accuracy of their staking rewards.
+The `operator` role is associated with the node operator, allowing for:
 
-#### Design Justification and Conclusion
+- Approving stake quotas, i.e., adding deposit data to the StakingVault
+- Attest unbondings
+- Claim fees
+- Update the fee recipient address
 
-This design decision is a pragmatic response to the inherent limitations and architectural design of the Ethereum network. It effectively addresses the disconnect between validator exit processes and smart contract execution, ensuring that the `StakingRewards` contract functions accurately and efficiently within these constraints. Simultaneously, it underscores the importance of stakeholder engagement and responsibility to ensure a consistent state and the correct allocation of rewards and fees.
+### Expensive stake quota requests
 
-We are implementing the [EIP-1822 UUPS standard](https://eips.ethereum.org/EIPS/eip-1822), following the recommended best-practice of separating variables from logic by using inheritance for subsequent contract versions.
+Stake quota requests are purposefully expensive to prevent spamming our validator provisioning service.
+The cost of a stake quota request is proportional to the number of validators requested.
+We do this by preallocating storage slots for deposit data that is to be registered by the operator.
 
-Specifically, we use the [EIP-1967 Proxy](https://eips.ethereum.org/EIPS/eip-1967) implementation of OpenZeppelin.
+### Execution triggerable exits
+
+We are implementing [EIP-7002](https://eips.ethereum.org/EIPS/eip-7002) to allow the `staker` to trigger unbondings of stake, i.e., exits of validators, solely via the execution layer. That is to fully enable the `staker` to manage their stake without the need for external interactions.
+
+#### EIP-7002
+
+EIP-7002 will become active with the upcoming [Pectra hardfork](https://eips.ethereum.org/EIPS/eip-7600). Up until then, the associated functions will revert.
+
+The tests contain references to the compiles [geas](https://github.com/fjl/geas) implementation of EIP-7002, as found in:
+
+- Original source: https://github.com/lightclient/sys-asm/blob/main/src/withdrawals/main.eas
+- Taken from commit `e5d197005661481f7b83f189e183949eaa2d3ae5`
+- The official audit references this repository: https://github.com/ethereum/requests-for-proposals/blob/master/open-rfps/pectra-system-contracts-audit.md
+- Compiled with: `geas lib/sys-asm/src/withdrawals/main.eas`
+
+### No support for EIP-7251
+
+We are aware of [EIP-7251](https://eips.ethereum.org/EIPS/eip-7251), but this StakingVault implementation does explicitly use `0x01` withdrawal credentials only. We consider implementing a compounding version of this StakingVault using `0x02` credentials, but this is out of scope for this implementation.
+
+Execution-layer triggerable validator consolidation are not an issue for our StakingVault as the StakingVault itself is set to be the withdrawal address and therefore the only entity that can trigger such consolidations.
+
+### Not using EIP-4788
+
+We are aware of [EIP-4788](https://eips.ethereum.org/EIPS/eip-4788), i.e., the effective presence of beacon chain data in the EVM but found little value for our concrete implementation compared to the complexity it poses to implement and the UX it imposes onto the caller. We have therefore decided not to implement any proofs and proof checking in the StakingVault. This comes with at least one limitation when calculating rewards, fees, and unbonded principal: In our design, withdrawable principal takes precedence. When an unbonding is triggered, rewards and fees present in the vault are temporarily "locked" by being allocated towards being withdrawn as principal. Once the principal is swept off the balance of the exited validator, fees and rewards can be claimed as usual.
 
 ## Setup
 
@@ -65,14 +156,6 @@ We are using foundry as the primary development toolkit for this project. Follow
 - [Forge Std](https://github.com/foundry-rs/forge-std): collection of helpful contracts and utilities for testing
 - [Prettier](https://github.com/prettier/prettier): code formatter for non-Solidity files
 - [Solhint](https://github.com/protofire/solhint): linter for Solidity code
-
-The Justfaring contracts project uses the [Truffle Suite](https://trufflesuite.com/) and [Node.js with `npm`](https://nodejs.org/en) to manage its dependencies.
-
-With `node`, you can proceed with installing the project-specific dependencies:
-
-```shell
-npm install
-```
 
 For static analysis, [Slither](https://github.com/crytic/slither) is used to perform automated security analysis on the smart contracts.
 
@@ -92,39 +175,26 @@ solc-select use 0.8.28
 
 ## Developing
 
-### Compiling
-
-To compile the contracts for use in web applications using [`wagmi`](https://wagmi.sh), you can run:
+### Building
 
 ```shell
-npm run compile
-npx hardhat generate-typescript-abi
+# forge clean
+forge build
+```
+
+### Formatting
+
+```shell
+forge fmt
 ```
 
 ### Linting
 
-You can lint `.js` and `.ts` files with
-
 ```shell
-npm run lint:ts
+npm run lint
 ```
 
-as well as the `.sol` files with
-
-```shell
-npm run lint:sol
-```
-
-Most issues can be fixed with
-
-```shell
-npm run lint:ts -- --fix
-npm run fmt
-```
-
-### Analysis
-
-To run the analyzer:
+### Static-Analysis
 
 ```shell
 npm run analyze
@@ -136,434 +206,6 @@ To run the tests, you can run:
 
 ```shell
 npm run test
-```
-
-#### Generate test-coverage
-
-To generate test coverage information, you can run:
-
-```shell
-npm run test:coverage
-```
-
-#### Manual testing
-
-Manual tests can be conducted using [`ethdo`](https://github.com/wealdtech/ethdo), which can be installed using `go`:
-
-```shell
-go install github.com/wealdtech/ethdo@latest
-```
-
-```shell
-export ETHDO_WALLET_NAME="Development"
-export ETHDO_PASSPHRASE="Development"
-export ETHDO_MNEMONIC="..."
-export ETHDO_ACCOUNT_INDEX=1
-export ETHDO_CONFIG_WITHDRAWAL_ADDRESS=0x...
-
-# Create a wallet
-ethdo wallet create --wallet="${ETHDO_WALLET_NAME}" --type="hd" --wallet-passphrase="${ETHDO_PASSPHRASE}" --mnemonic="${ETHDO_MNEMONIC}" --allow-weak-passphrases
-
-# Delete a wallet
-ethdo wallet delete --wallet="${ETHDO_WALLET_NAME}"
-
-# Create an account
-ethdo account create --account="${ETHDO_WALLET_NAME}/Validators/${ETHDO_ACCOUNT_INDEX}" --wallet-passphrase="${ETHDO_PASSPHRASE}" --passphrase="${ETHDO_PASSPHRASE}" --allow-weak-passphrases --path="m/12381/3600/${ETHDO_ACCOUNT_INDEX}/0/0"
-
-# Create deposit data for a new validator
-ethdo validator depositdata --validatoraccount="${ETHDO_WALLET_NAME}/Validators/${ETHDO_ACCOUNT_INDEX}" --depositvalue="32Ether" --withdrawaladdress="${ETHDO_CONFIG_WITHDRAWAL_ADDRESS}" --passphrase="${ETHDO_PASSPHRASE}" --forkversion="0x10000038"
-```
-
-#### Integration testing
-
-##### Local Testnet
-
-In addition to the previously mentioned requirements, you will need the following in order to run the local testnet:
-
-- [Setup docker](https://docs.kurtosis.com/next/install#i-install--start-docker)
-- [Install kurtosis](https://docs.kurtosis.com/install#ii-install-the-cli)
-
-###### Launch a local ethereum network
-
-```shell
-just localnet-start
-```
-
-Please note that you will need to wait 20 seconds until genesis.
-
-With default settings being used, the network will run at `http://127.0.0.1:64248`.
-Prefunded accounts use the following private keys ([source](https://github.com/ethpandaops/ethereum-package/blob/main/src/prelaunch_data_generator/genesis_constants/genesis_constants.star)):
-
-| Private Key                                                      | Address                                    |
-| ---------------------------------------------------------------- | ------------------------------------------ |
-| bcdf20249abf0ed6d944c0288fad489e33f66b3960d9e6229c1cd214ed3bbe31 | 0x8943545177806ED17B9F23F0a21ee5948eCaa776 |
-| 39725efee3fb28614de3bacaffe4cc4bd8c436257e2c8bb887c4b5c4be45e76d | 0xE25583099BA105D9ec0A67f5Ae86D90e50036425 |
-| 53321db7c1e331d93a11a41d16f004d7ff63972ec8ec7c25db329728ceeb1710 | 0x614561D2d143621E126e87831AEF287678B442b8 |
-| ab63b23eb7941c1251757e24b3d2350d2bc05c3c388d06f8fe6feafefb1e8c70 | 0xf93Ee4Cf8c6c40b329b0c0626F28333c132CF241 |
-| 5d2344259f42259f82d2c140aa66102ba89b57b4883ee441a8b312622bd42491 | 0x802dCbE1B1A97554B4F50DB5119E37E8e7336417 |
-| 27515f805127bebad2fb9b183508bdacb8c763da16f54e0678b16e8f28ef3fff | 0xAe95d8DA9244C37CaC0a3e16BA966a8e852Bb6D6 |
-| 7ff1a4c1d57e5e784d327c4c7651e952350bc271f156afb3d00d20f5ef924856 | 0x2c57d1CFC6d5f8E4182a56b4cf75421472eBAEa4 |
-| 3a91003acaf4c21b3953d94fa4a6db694fa69e5242b2e37be05dd82761058899 | 0x741bFE4802cE1C4b5b00F9Df2F5f179A1C89171A |
-| bb1d0f125b4fb2bb173c318cdead45468474ca71474e2247776b2b4c0fa2d3f5 | 0xc3913d4D8bAb4914328651C2EAE817C8b78E1f4c |
-| 850643a0224065ecce3882673c21f56bcf6eef86274cc21cadff15930b59fc8c | 0x65D08a056c17Ae13370565B04cF77D2AfA1cB9FA |
-| 94eb3102993b41ec55c241060f47daa0f6372e2e3ad7e91612ae36c364042e44 | 0x3e95dFbBaF6B348396E6674C7871546dCC568e56 |
-
-###### Deploying
-
-Deploy the contracts to the local network:
-
-```shell
-npx hardhat batch-deposit:deploy --network localnet --ethereum-deposit-contract-address 0x4242424242424242424242424242424242424242
-```
-
-###### Interacting
-
-There are 32 validators running, awaiting activation, with their keys derived the following mnemonic:
-
-```text
-flee title shaft evoke stable vote injury ten strong farm obtain pause record rural device cotton hollow echo good acquire scrub buzz vacant liar
-```
-
-You'll need create deposit data first to deposit to one or multiple of these validators. The following examples use `ethdo` as mentioned in the testing section.
-
-```shell
-export WITHDRAWAL_ADDRESS=0x8943545177806ED17B9F23F0a21ee5948eCaa776
-export ETHDO_CONFIG_WALLET="Development"
-export ETHDO_CONFIG_PASSPHRASE=test
-export ETHDO_CONFIG_MNEMONIC="flee title shaft evoke stable vote injury ten strong farm obtain pause record rural device cotton hollow echo good acquire scrub buzz vacant liar"
-export ETHDO_CONFIG_WITHDRAWAL_ADDRESS=$WITHDRAWAL_ADDRESS
-
-ethdo wallet create --wallet="${ETHDO_CONFIG_WALLET}" --type="hd" --wallet-passphrase="${ETHDO_CONFIG_PASSPHRASE}" --mnemonic="${ETHDO_CONFIG_MNEMONIC}" --allow-weak-passphrases
-
-for ETHDO_VALIDATOR_INDEX in {1..10}
-do
-    ethdo account create --account="${ETHDO_CONFIG_WALLET}/Validators/${ETHDO_VALIDATOR_INDEX}" --wallet-passphrase="${ETHDO_CONFIG_PASSPHRASE}" --passphrase="${ETHDO_CONFIG_PASSPHRASE}" --allow-weak-passphrases --path="m/12381/3600/${ETHDO_VALIDATOR_INDEX}/0/0"
-    ethdo validator depositdata --validatoraccount="${ETHDO_CONFIG_WALLET}/Validators/${ETHDO_VALIDATOR_INDEX}" --depositvalue="32Ether" --withdrawaladdress="${ETHDO_CONFIG_WITHDRAWAL_ADDRESS}" --passphrase="${ETHDO_CONFIG_PASSPHRASE}" --forkversion="0x10000038" > /tmp/local-validator-depositdata-${ETHDO_VALIDATOR_INDEX}.json
-done
-
-# Get public keys
-ls /tmp/local-validator-*.json | xargs -I {} jq -r '.[0].pubkey' {} | awk 'BEGIN{ORS=","} {print}' | sed 's/,$/\n/' > /tmp/local-validator-pubkeys.txt
-
-# Get signatures
-ls /tmp/local-validator-*.json | xargs -I {} jq -r '.[0].signature' {} | awk 'BEGIN{ORS=","} {print}' | sed 's/,$/\n/' > /tmp/local-validator-signatures.txt
-
-# Get deposit data roots
-ls /tmp/local-validator-*.json | xargs -I {} jq -r '.[0].deposit_data_root' {} | awk 'BEGIN{ORS=","} {print}' | sed 's/,$/\n/' > /tmp/local-validator-deposit-data-roots.txt
-
-# Concatenate depositdata
-echo '[' > /tmp/local-validator-depositdata.json
-cat /tmp/local-validator-depositdata-*.json | jq -c '.[]' | sed '$!s/$/,/' >> /tmp/local-validator-depositdata.json
-echo ']' >> /tmp/local-validator-depositdata.json
-# Remove the development wallet
-ethdo wallet delete --wallet="${ETHDO_CONFIG_WALLET}"
-```
-
-You can now extract the respective depositdata from the created depositdata files in `/tmp`. For example, get the pubkeys for registering them with the BatchDeposit contract:
-
-```shell
-# deploy the BatchDeposit contract
-npx hardhat batch-deposit:deploy --network localnet --ethereum-deposit-contract-address 0x4242424242424242424242424242424242424242
-
-# export the address afterwards:
-export BATCH_DEPOSIT_CONTRACT_ADDRESS=0xb4B46bdAA835F8E4b4d8e208B6559cD267851051
-
-# register valiadtors as available
-npx hardhat batch-deposit:register-validators --network localnet --batch-deposit-contract-address $BATCH_DEPOSIT_CONTRACT_ADDRESS --validator-public-keys "0x8e1b5d5d2938c6ae35445875f5a6410d8a8f6b93b486ee795632ef1cc9329849e91098a4d86108199ea9f017a4f57ce3,0x8c35be170b4741be1314e22d46e0a8ddca9d08c182bcd9f37e85a1fd1ea0d37dbcf972e13a86f2ba369066d098140694,0xb8c4b28d46a73aa82c400b7f159645b097953d37e2ca98908bc236b5b6292a6ba3a0612e8454867a3f9f38a1c8184d0f"
-
-# validate availability of a specific validator public key
-npx hardhat batch-deposit:is-validator-available --network localnet --batch-deposit-contract-address $BATCH_DEPOSIT_CONTRACT_ADDRESS --validator-public-key 0x8e1b5d5d2938c6ae35445875f5a6410d8a8f6b93b486ee795632ef1cc9329849e91098a4d86108199ea9f017a4f57ce3
-
-# validate un-availability of a specific validator public key
-npx hardhat batch-deposit:is-validator-available --network localnet --batch-deposit-contract-address $BATCH_DEPOSIT_CONTRACT_ADDRESS --validator-public-key 0x96b26551fa223f8509b13e651d4bde3749d93df13ca2c45f89d2d96a19cfaaf6bb6600cba7ec4f280de246479af4472d
-
-# deposit to multiple validators
-npx hardhat batch-deposit:batch-deposit --network localnet --batch-deposit-contract-address $BATCH_DEPOSIT_CONTRACT_ADDRESS --staking-rewards-contract-address $JF_STAKING_REWARDS_CONTRACT_ADDRESS --validator-public-keys "0x8e1b5d5d2938c6ae35445875f5a6410d8a8f6b93b486ee795632ef1cc9329849e91098a4d86108199ea9f017a4f57ce3,0x8c35be170b4741be1314e22d46e0a8ddca9d08c182bcd9f37e85a1fd1ea0d37dbcf972e13a86f2ba369066d098140694,0xb8c4b28d46a73aa82c400b7f159645b097953d37e2ca98908bc236b5b6292a6ba3a0612e8454867a3f9f38a1c8184d0f" --validator-signatures "..." --validator-deposit-data-roots "..."
-
-# deploy the StakingRewards contract
-npx hardhat staking-rewards:deploy --network localnet --batch-deposit-contract-address $BATCH_DEPOSIT_CONTRACT_ADDRESS --fee-address 0x4E9A3d9D1cd2A2b2371b8b3F489aE72259886f1A --fee-basis-points 1000 --rewards-address 0xdF8466f277964Bb7a0FFD819403302C34DCD530A
-# export the address afterwards: export JF_STAKING_REWARDS_CONTRACT_ADDRESS=0xBFF5cD0aA560e1d1C6B1E2C347860aDAe1bd8235
-
-# excute a native ethereum staking deposit
-npx hardhat native-staking:deposit --network localnet --ethereum-deposit-contract-address 0x4242424242424242424242424242424242424242 --deposit-data-path /tmp/local-validator-depositdata-16.json
-
-# Listing all deposits
-npx hardhat --network localnet debug:list-deposits --ethereum-deposit-contract-address 0x4242424242424242424242424242424242424242
-
-# debugging a transaction
-npx hardhat --network localnet debug:transaction --tx-hash 0xbc0ce66317705141485622a5c30e91f6a54fbae7a601056563887688c72e6949
-```
-
-You can use the following command to get the public keys of the validators:
-
-```bash
-ls /tmp/local-validator-*.json | xargs -I {} jq -r '.[0].pubkey' {}
-```
-
-###### Observing
-
-You can stream the logs of these validator nodes with:
-
-```shell
-docker logs -f $(docker ps | grep prysm-validator | awk '{print $1}' | tr -d '\n')
-```
-
-This is especially helpful for observing validators become active upon using `BatchDepoit.sol`.
-
-You can use `ethdo` to inspect validators:
-
-```shell
-# Get general chain info
-ethdo --connection=http://localhost:$CL_RPC_PORT chain info
-
-# Get info about validator #1
-ethdo --connection=http://localhost:$CL_RPC_PORT validator info --validator 0x8e1b5d5d2938c6ae35445875f5a6410d8a8f6b93b486ee795632ef1cc9329849e91098a4d86108199ea9f017a4f57ce3
-ethdo --connection=http://localhost:$CL_RPC_PORT validator info --validator 0x8c35be170b4741be1314e22d46e0a8ddca9d08c182bcd9f37e85a1fd1ea0d37dbcf972e13a86f2ba369066d098140694
-ethdo --connection=http://localhost:$CL_RPC_PORT validator info --validator 0xb8c4b28d46a73aa82c400b7f159645b097953d37e2ca98908bc236b5b6292a6ba3a0612e8454867a3f9f38a1c8184d0f
-```
-
-###### Cleanup
-
-Remember to clean up when you are done.
-
-```shell
-# Clean up kurtosis
-kurtosis clean -a
-
-# Remove the development wallet
-ethdo wallet delete --wallet="${ETHDO_CONFIG_WALLET}"
-```
-
-## Deployment
-
-Compile the contracts with:
-
-```shell
-npm run compile
-```
-
-And continue by following the network-specific instructions below to deploy the contracts to a network.
-
-### Localnet
-
-Deploying to the locally running network is as simple as running:
-
-```shell
-npx hardhat batch-deposit:deploy --network localnet --ethereum-deposit-contract-address 0x4242424242424242424242424242424242424242
-```
-
-### Holesky
-
-Deploying to Holesky requires [`Frame`](https://frame.sh) as the external signer. This setup enables the use of hardware wallets during the deployment.
-
-```shell
-npx hardhat batch-deposit:deploy-via-frame --network holesky --ethereum-deposit-contract-address 0x4242424242424242424242424242424242424242
-
-# export the address afterwards: export BATCH_DEPOSIT_CONTRACT_ADDRESS=0x...
-
-# Verify the contract
-npm run verify -- --network holesky $BATCH_DEPOSIT_CONTRACT_ADDRESS "0x4242424242424242424242424242424242424242"
-```
-
-### Mainnet
-
-Deploying to the Ethereum mainnet requires [`Frame`](https://frame.sh) as the external signer. This setup enables the use of hardware wallets during the deployment.
-The Beacon Chain Deposit Contract address is `0x00000000219ab540356cBB839Cbe05303d7705Fa` and can be verified in different sources:
-
-- <https://ethereum.org/staking/deposit-contract>
-- <https://etherscan.io/address/0x00000000219ab540356cbb839cbe05303d7705fa>
-- <https://github.com/ethereum/consensus-specs/blob/dev/configs/mainnet.yaml#L110>
-
-```shell
-npx hardhat batch-deposit:deploy-via-frame --network mainnet --ethereum-deposit-contract-address 0x00000000219ab540356cBB839Cbe05303d7705Fa
-
-# export the address afterwards: export BATCH_DEPOSIT_CONTRACT_ADDRESS=0x...
-
-# Verify the contract
-npm run verify -- --network mainnet $BATCH_DEPOSIT_CONTRACT_ADDRESS "0x00000000219ab540356cBB839Cbe05303d7705Fa"
-```
-
-## Development
-
-- [Forge](https://github.com/foundry-rs/foundry/blob/master/forge): compile, test, fuzz, format, and deploy smart
-  contracts
-- We use git submodules for managing dependencies
-- [Forge Std](https://github.com/foundry-rs/forge-std): collection of helpful contracts and utilities for testing
-- [Prettier](https://github.com/prettier/prettier): code formatter for non-Solidity files
-- [Solhint](https://github.com/protofire/solhint): linter for Solidity code
-
-Dependencies:
-
-```shell
-# For our contracts
-solc-select install 0.8.28
-# For the consensus-specs deposit contract
-solc-select install 0.6.11
-```
-
-Node.js is used for solhint
-
-```shell
-npm install
-npm run lint
-```
-
-For convenience, other forge commands are also available via package scripts:
-
-```shell
-npm run fmt
-npm run build
-npm run test
+npm run test:gas-report
 npm run test:coverage:report
 ```
-
-# Foundry
-
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
-
-Foundry consists of:
-
-- **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
-- **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
-- **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
-- **Chisel**: Fast, utilitarian, and verbose solidity REPL.
-
-## Documentation
-
-https://book.getfoundry.sh/
-
-## Usage
-
-### Build
-
-```shell
-$ forge build
-```
-
-### Test
-
-```shell
-$ forge test
-```
-
-### Format
-
-```shell
-$ forge fmt
-```
-
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
-
-## Use-Cases
-
-```mermaid
-sequenceDiagram
-    actor Staker
-    participant StakingVault Contract
-    participant Beacon Deposit Contract
-    participant Ethereum Network
-    participant Validator
-    actor Node Operator
-
-    Staker->>StakingVault Contract: Initialize
-
-    loop Staking phase
-        Staker->>StakingVault Contract: Request Staking Quota
-        Node Operator->>Validator: Allocate Staking Quota
-        Node Operator->>StakingVault Contract: Register Staking Data
-
-        Staker->>StakingVault Contract: Verify Staking Data
-        Staker->>StakingVault Contract: Send Stake
-        StakingVault Contract->>+Beacon Deposit Contract: Forward Stake
-        Note over Beacon Deposit Contract: Wait for Ethereum Network to activate validator
-	end
-
-    loop Active phase
-        Ethereum Network->>Validator: Request Block Attestations & Signings
-        Validator->>Ethereum Network: Sign and Attest Blocks
-        Ethereum Network->>Validator: Increase Validator Balance with Consensus-Rewards
-        Ethereum Network->>Validator: Withdraw Consensus-Rewards every ~4.5 days
-        Ethereum Network->>StakingVault Contract: Credit Consensus-Rewards every ~4.5 days
-		Ethereum Network->>StakingVault Contract: Send Execution-Rewards for signed Blocks
-
-		Staker->>StakingVault Contract: Claim
-		StakingVault Contract->>Staker: Release Rewards
-
-		Node Operator->>StakingVault Contract: Withdraw Fees
-		StakingVault Contract->>Node Operator: Release Fees
-	end
-
-    Staker->>StakingVault Contract: Request Unstake
-    StakingVault Contract->>+Ethereum Network: Forward Exit Request
-
-    Note over Ethereum Network: Wait for Ethereum Exit Queue
-
-    Validator->>Validator: Stop Validation
-
-    Ethereum Network->>StakingVault Contract: Release Stake & Consensus-Rewards
-
-    Staker->>StakingVault Contract: Claim
-    StakingVault Contract->>Staker: Release Stake & Rewards
-
-    Node Operator->>StakingVault Contract: Withdraw Fees
-    StakingVault Contract->>Node Operator: Release Fees
-```
-
-UUPS comes from ERC-1822, which first documented the pattern.
-
-# EIP-7002
-
-This directory contains the [geas](https://github.com/fjl/geas) implementation of [EIP-7002](https://eips.ethereum.org/EIPS/eip-7002).
-
-Original source: https://github.com/lightclient/sys-asm/blob/main/src/withdrawals/main.eas
-Taken from commit `e5d197005661481f7b83f189e183949eaa2d3ae5`
-The official audit references this repository: https://github.com/ethereum/requests-for-proposals/blob/master/open-rfps/pectra-system-contracts-audit.md
-Compile with: `geas lib/eip-7002/main.eas`
-
-# EIP-7251
-
-Increase the MAX_EFFECTIVE_BALANCE
-
-This contract does not make use of `0x02` withdrawal credentials, but explicitly encodes `0x01` withdrawal credentials in the contract. Therefore, compounding is not used. Compound requests have to be sent by the address encoded in the withdrawal credential, i.e., instances of the staking vault, which doesn't implement this feature.
-
-# Limitations
-
-Withdrawable principal takes precedence. In case of triggering an exit, rewards and fees present in the vault are temporarily "locked" by being allocated towards being withdrawn as principal.
-Once swept off the balance of the exited validator, fees and rewards can be claimed as usual.
-Known limitation.
-In the worst case, a malicious staker would continuously exit validators, therefore block us from claiming fees.
-
-            // TODO: Check pubkey is not already registered
-
-            // TODO: Check pubkey is not already exited
-
-            // TODO: Validate that the validator has never been "used" before

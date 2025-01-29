@@ -1,72 +1,40 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {console} from "forge-std/console.sol";
-import {StakingVaultV1} from "../src/StakingVault.v1.sol";
-import {StakingVaultFactory} from "../src/StakingVaultFactory.sol";
+import { console } from "forge-std/console.sol";
+import { StakingVault } from "../src/StakingVault.sol";
+import { StakingHub } from "../src/StakingHub.sol";
 
-import {BaseScript} from "./Base.s.sol";
+import { BaseScript } from "./Base.s.sol";
 
-contract DeployStakingVaultImplementation is BaseScript {
-    function run() public broadcast returns (StakingVaultV1 v1) {
-        v1 = new StakingVaultV1();
-    }
-}
-
-contract DeployStakingVaultFactory is BaseScript {
-    function run() public broadcast returns (StakingVaultFactory factory) {
-        factory = new StakingVaultFactory(
-            StakingVaultV1(
-                payable(address(0xb4B46bdAA835F8E4b4d8e208B6559cD267851051))
-            ),
-            payable(address(0x8943545177806ED17B9F23F0a21ee5948eCaa776)),
-            payable(address(0x8943545177806ED17B9F23F0a21ee5948eCaa776)),
-            1_000
-        );
-    }
-}
-
-contract DeployStakingVaultProxy is BaseScript {
-    function run() public broadcast returns (StakingVaultV1 proxy) {
-        StakingVaultFactory factory = StakingVaultFactory(
-            payable(address(0x17435ccE3d1B4fA2e5f8A08eD921D57C6762A180))
-        );
-
-        proxy = StakingVaultV1(payable(address(factory.createVault())));
-    }
-}
-
-contract ApproveStakeQuota is BaseScript {
+contract DeployDevnet is BaseScript {
     function run() public broadcast {
-        StakingVaultV1 proxy = StakingVaultV1(
-            payable(address(0xc3d8108FC7f92B936552d658fc3dBC834193f344))
-        );
+        uint256 feeBasisPoints = 1000;
 
-        string memory root = vm.projectRoot();
-        string memory path = string.concat(
-            root,
-            "/tests/fixtures/320eth-deposit.json"
-        );
-        string memory json = vm.readFile(path);
-        bytes[] memory pubkeys = vm.parseJsonBytesArray(json, ".pubkeys");
-        bytes[] memory signatures = vm.parseJsonBytesArray(json, ".signatures");
-        uint256[] memory depositValues = vm.parseJsonUintArray(
-            json,
-            ".amounts"
-        );
+        // Private Key #1
+        address payable operator = payable(address(0x8943545177806ED17B9F23F0a21ee5948eCaa776));
 
-        proxy.approveStakeQuota(pubkeys, signatures, depositValues);
-    }
-}
+        // Private Key #2
+        address payable feeRecipient = payable(address(0xE25583099BA105D9ec0A67f5Ae86D90e50036425));
 
-contract StakeNow is BaseScript {
-    function run() public broadcast {
-        address payable proxy = payable(
-            address(0xc3d8108FC7f92B936552d658fc3dBC834193f344)
-        );
+        // Private Key #3
+        address payable staker = payable(address(0x614561D2d143621E126e87831AEF287678B442b8));
 
-        (bool success, ) = proxy.call{value: 64 ether}("");
+        // Deploy our StakingVault implementation contract
+        StakingVault stakingVaultImplementation = new StakingVault();
 
-        console.log("Staking success: %s", success);
+        // Deploy the StakingHub contract
+        StakingHub StakingHub = new StakingHub(stakingVaultImplementation, operator, feeRecipient, feeBasisPoints);
+
+        // Deploy a proxy for the staker
+        // TODO: call as staker
+        StakingVault stakingVaultProxy = StakingHub.createVault(0);
+
+        console.log("Operator: %s", operator);
+        console.log("Fee recipient: %s", feeRecipient);
+        console.log("Staker: %s", staker);
+        console.log("StakingVault (Implementation): %s", address(stakingVaultImplementation));
+        console.log("StakingHub: %s", address(StakingHub));
+        console.log("StakingVault (of the Staker): %s", address(stakingVaultProxy));
     }
 }

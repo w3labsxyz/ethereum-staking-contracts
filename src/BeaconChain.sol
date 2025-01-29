@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {Bytes} from "@openzeppelin/contracts/utils/Bytes.sol";
+import { Bytes } from "@openzeppelin/contracts/utils/Bytes.sol";
 
 /// @title BeaconChain
-/// @dev A library with beacon chain specific constants and a function to reconstruct the deposit data root from partial deposit data
+/// @dev A library with beacon chain specific constants and a function to reconstruct the deposit data root from partial
+/// deposit data
 library BeaconChain {
     // @dev The minimum amount required to activate a validator
     uint256 public constant MIN_ACTIVATION_BALANCE = 32 ether;
@@ -42,7 +43,11 @@ library BeaconChain {
         bytes32 withdrawalCredentials,
         bytes memory signature,
         uint256 depositAmountInWei
-    ) internal pure returns (bytes32) {
+    )
+        internal
+        pure
+        returns (bytes32)
+    {
         // Check deposit amount: The deposit value must be a multiple of gwei
         if (depositAmountInWei % 1 gwei != 0) revert DepositAmountInvalid();
 
@@ -52,42 +57,26 @@ library BeaconChain {
             revert DepositAmountInvalid();
         }
 
-        bytes memory depositAmount = _toLittleEndian64(
-            uint64(depositAmountInGwei)
-        );
+        bytes memory depositAmount = _toLittleEndian64(uint64(depositAmountInGwei));
         bytes32 pubkeyRoot = sha256(abi.encodePacked(pubkey, bytes16(0)));
         bytes32 signatureRoot = sha256(
             abi.encodePacked(
                 sha256(abi.encodePacked(Bytes.slice(signature, 0, 64))),
-                sha256(
-                    abi.encodePacked(
-                        Bytes.slice(signature, 64, SIGNATURE_LENGTH),
-                        bytes32(0)
-                    )
-                )
+                sha256(abi.encodePacked(Bytes.slice(signature, 64, SIGNATURE_LENGTH), bytes32(0)))
             )
         );
-        return
-            sha256(
-                abi.encodePacked(
-                    sha256(abi.encodePacked(pubkeyRoot, withdrawalCredentials)),
-                    sha256(
-                        abi.encodePacked(
-                            depositAmount,
-                            bytes24(0),
-                            signatureRoot
-                        )
-                    )
-                )
-            );
+        return sha256(
+            abi.encodePacked(
+                sha256(abi.encodePacked(pubkeyRoot, withdrawalCredentials)),
+                sha256(abi.encodePacked(depositAmount, bytes24(0), signatureRoot))
+            )
+        );
     }
 
     /// @dev Convert a uint64 value to a little-endian byte array
     /// Implementation adapted from the Ethereum 2.0 specification:
     /// https://github.com/ethereum/consensus-specs/blob/dev/solidity_deposit_contract/deposit_contract.sol#L165-L177
-    function _toLittleEndian64(
-        uint64 value
-    ) private pure returns (bytes memory ret) {
+    function _toLittleEndian64(uint64 value) private pure returns (bytes memory ret) {
         ret = new bytes(8);
         bytes8 bytesValue = bytes8(value);
         // Byteswapping during copying to bytes.

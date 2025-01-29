@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {console} from "forge-std/console.sol";
-import {Script} from "forge-std/Script.sol";
+import { console } from "forge-std/console.sol";
+import { Script } from "forge-std/Script.sol";
 
 abstract contract BaseScript is Script {
     /// @dev Private key to be used in local development
-    uint256 internal constant LOCALNET_PRIVATE_KEY =
-        0xbcdf20249abf0ed6d944c0288fad489e33f66b3960d9e6229c1cd214ed3bbe31;
+    uint256 internal constant LOCALNET_PRIVATE_KEY = 0xbcdf20249abf0ed6d944c0288fad489e33f66b3960d9e6229c1cd214ed3bbe31;
 
     /// @dev The private key used to sign transactions.
     uint256 internal privateKey;

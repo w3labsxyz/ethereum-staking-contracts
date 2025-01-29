@@ -13,11 +13,5 @@ localnet-stop:
 localnet-info:
     kurtosis enclave inspect localnet
 
-deploy-vault chain:
-    forge script --chain="{{chain}}" scripts/Deploy.s.sol:DeployStakingVaultImplementation --broadcast --fork-url http://localhost:34002
-
-deploy-factory chain:
-    forge script --chain="{{chain}}" scripts/Deploy.s.sol:DeployStakingVaultFactory --broadcast --fork-url http://localhost:34002
-
-deploy-proxy chain:
-    forge script --chain="{{chain}}" scripts/Deploy.s.sol:DeployStakingVaultProxy --broadcast --fork-url http://localhost:34002
+deploy-devnet:
+    forge script --chain="dev" scripts/Deploy.s.sol:DeployDevnet --broadcast --fork-url http://great-weevil:34002
