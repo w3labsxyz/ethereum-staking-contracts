@@ -517,7 +517,7 @@ contract StakingVault is
 
     /// @notice Get the total amount of principal that can be withdrawn
     function withdrawablePrincipal() external view virtual returns (uint256) {
-        if (_withdrawablePrincipal > address(this).balance) {
+        if (_withdrawablePrincipal >= address(this).balance) {
             return address(this).balance;
         }
 
