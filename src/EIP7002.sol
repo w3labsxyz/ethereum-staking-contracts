@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import { Math } from "@openzeppelin/contracts/utils/math/Math.sol";
-
 /// @title EIP-7002 Compatibility Layer
 /// @dev This is a simple wrapper for compatibility with the contract provided via EIP-7002.
 ///
