@@ -269,7 +269,7 @@ contract StakingVault is
 
         uint16 numberOfDeposits = uint16(newRequestedStakeQuota / BeaconChain.MAX_EFFECTIVE_BALANCE);
         uint16 depositDataOffset = _depositDataCount;
-        for (uint16 i = depositDataOffset; i < depositDataOffset + numberOfDeposits; i++) {
+        for (uint16 i = depositDataOffset; i < depositDataOffset + numberOfDeposits; ++i) {
             _depositData[i] = StoredDepositData({
                 // We are using non-zero values to initialize the fields
                 // in order to actually allocate the storage slots
@@ -306,7 +306,7 @@ contract StakingVault is
         ) revert InvalidDepositData();
 
         uint16 depositDataOffset = _depositDataCount;
-        for (uint16 i = 0; i < numberOfDepositData; i++) {
+        for (uint16 i = 0; i < numberOfDepositData; ++i) {
             if (pubkeys[i].length != BeaconChain.PUBKEY_LENGTH) {
                 revert PublicKeyLengthMismatch();
             }
@@ -356,7 +356,7 @@ contract StakingVault is
         _numberOfDeposits += numberOfNewDeposits;
         _principalAtStake += BeaconChain.MAX_EFFECTIVE_BALANCE * numberOfNewDeposits;
 
-        for (uint16 i = previousNumberOfDeposits; i < previousNumberOfDeposits + numberOfNewDeposits; i++) {
+        for (uint16 i = previousNumberOfDeposits; i < previousNumberOfDeposits + numberOfNewDeposits; ++i) {
             StoredDepositData storage storedDepositData = _depositData[i];
 
             bytes memory pubkey = bytes.concat(storedDepositData.pubkey_1, bytes16(storedDepositData.pubkey_2));
@@ -403,7 +403,7 @@ contract StakingVault is
         uint256 withdrawalFee = msg.value / numberOfUnbondings;
         uint256 totalWithdrawAmount = 0;
 
-        for (uint256 i = 0; i < numberOfUnbondings; i++) {
+        for (uint256 i = 0; i < numberOfUnbondings; ++i) {
             if (pubkeys[i].length != BeaconChain.PUBKEY_LENGTH) {
                 revert PublicKeyLengthMismatch();
             }
@@ -443,7 +443,7 @@ contract StakingVault is
 
         uint256 totalWithdrawAmount = 0;
 
-        for (uint256 i = 0; i < numberOfUnbondings; i++) {
+        for (uint256 i = 0; i < numberOfUnbondings; ++i) {
             if (pubkeys[i].length != BeaconChain.PUBKEY_LENGTH) {
                 revert PublicKeyLengthMismatch();
             }
@@ -550,7 +550,7 @@ contract StakingVault is
     function allPubkeys() external view virtual returns (bytes[] memory) {
         bytes[] memory pubkeys = new bytes[](_depositDataCount);
 
-        for (uint16 i = 0; i < _numberOfDeposits; i++) {
+        for (uint16 i = 0; i < _numberOfDeposits; ++i) {
             StoredDepositData storage storedDepositData = _depositData[i];
             pubkeys[i] = bytes.concat(storedDepositData.pubkey_1, bytes16(storedDepositData.pubkey_2));
         }
@@ -596,7 +596,7 @@ contract StakingVault is
         DepositData[] memory tempDepositData = new DepositData[](numberOfNewDeposits);
 
         uint16 depositDataOffset = _numberOfDeposits;
-        for (uint16 i = 0; i < numberOfNewDeposits; i++) {
+        for (uint16 i = 0; i < numberOfNewDeposits; ++i) {
             StoredDepositData storage storedDepositData = _depositData[depositDataOffset + i];
 
             bytes memory pubkey = bytes.concat(storedDepositData.pubkey_1, bytes16(storedDepositData.pubkey_2));
