@@ -326,7 +326,7 @@ contract StakingVault is
         }
 
         // We can safely downcast here as we have checked the length of pubkeys above
-        _depositDataCount += uint16(numberOfDepositData);
+        _depositDataCount = _depositDataCount + uint16(numberOfDepositData);
 
         emit StakeQuotaUpdated(_stakeQuota());
     }
@@ -353,8 +353,8 @@ contract StakingVault is
         uint16 previousNumberOfDeposits = _numberOfDeposits;
         uint16 numberOfNewDeposits = uint16(msg.value / BeaconChain.MAX_EFFECTIVE_BALANCE);
 
-        _numberOfDeposits += numberOfNewDeposits;
-        _principalAtStake += BeaconChain.MAX_EFFECTIVE_BALANCE * numberOfNewDeposits;
+        _numberOfDeposits = _numberOfDeposits + numberOfNewDeposits;
+        _principalAtStake = _principalAtStake + BeaconChain.MAX_EFFECTIVE_BALANCE * numberOfNewDeposits;
 
         for (uint16 i = previousNumberOfDeposits; i < previousNumberOfDeposits + numberOfNewDeposits; ++i) {
             StoredDepositData storage storedDepositData = _depositData[i];
@@ -364,7 +364,7 @@ contract StakingVault is
                 storedDepositData.signature_1, storedDepositData.signature_2, storedDepositData.signature_3
             );
 
-            _principalPerValidator[pubkey] += BeaconChain.MAX_EFFECTIVE_BALANCE;
+            _principalPerValidator[pubkey] = _principalPerValidator[pubkey] + BeaconChain.MAX_EFFECTIVE_BALANCE;
 
             // Deposit the funds to the beacon chain deposit contract
             _depositContractAddress.deposit{ value: BeaconChain.MAX_EFFECTIVE_BALANCE }(
@@ -419,12 +419,12 @@ contract StakingVault is
             if (expectedWithdrawAmount != 0) {
                 _principalPerValidator[pubkeys[i]] = 0;
             }
-            totalWithdrawAmount += expectedWithdrawAmount;
+            totalWithdrawAmount = totalWithdrawAmount + expectedWithdrawAmount;
         }
 
-        _principalAtStake -= totalWithdrawAmount;
-        _withdrawablePrincipal += totalWithdrawAmount;
-        _numberOfUnbondings += uint16(numberOfUnbondings);
+        _principalAtStake = _principalAtStake - totalWithdrawAmount;
+        _withdrawablePrincipal = _withdrawablePrincipal + totalWithdrawAmount;
+        _numberOfUnbondings = _numberOfUnbondings + uint16(numberOfUnbondings);
 
         _stakingHub.announceUnbondingRequest(_staker, pubkeys);
     }
@@ -450,12 +450,12 @@ contract StakingVault is
 
             uint256 expectedWithdrawAmount = _principalPerValidator[pubkeys[i]];
             _principalPerValidator[pubkeys[i]] = 0;
-            totalWithdrawAmount += expectedWithdrawAmount;
+            totalWithdrawAmount = totalWithdrawAmount + expectedWithdrawAmount;
         }
 
-        _principalAtStake -= totalWithdrawAmount;
-        _withdrawablePrincipal += totalWithdrawAmount;
-        _numberOfUnbondings += uint16(numberOfUnbondings);
+        _principalAtStake = _principalAtStake - totalWithdrawAmount;
+        _withdrawablePrincipal = _withdrawablePrincipal + totalWithdrawAmount;
+        _numberOfUnbondings = _numberOfUnbondings + uint16(numberOfUnbondings);
     }
 
     /// @notice Triggers withdrawal of unbonded principal
@@ -470,7 +470,7 @@ contract StakingVault is
             claimable = address(this).balance;
         }
 
-        _withdrawablePrincipal -= claimable;
+        _withdrawablePrincipal = _withdrawablePrincipal - claimable;
         Address.sendValue(_staker, claimable);
     }
 
