@@ -4,6 +4,8 @@ pragma solidity 0.8.28;
 import { AccessControl } from "@openzeppelin/contracts/access/AccessControl.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { ReentrancyGuardTransient } from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
+import { Create2 } from "@openzeppelin/contracts/utils/Create2.sol";
+
 import { StakingVault } from "./StakingVault.sol";
 import { IStakingHub } from "./interfaces/IStakingHub.sol";
 
@@ -102,28 +104,27 @@ contract StakingHub is IStakingHub, AccessControl, ReentrancyGuardTransient {
     function createVault(uint256 initialStakeQuota) external nonReentrant returns (StakingVault) {
         if (hasVault(msg.sender)) revert OneVaultPerAddress();
 
-        ERC1967Proxy proxy = new ERC1967Proxy(
-            address(_stakingVaultImplementation),
-            abi.encodeWithSelector(
-                StakingVault.initialize.selector,
-                address(this),
-                _defaultOperator,
-                _defaultFeeRecipient,
-                msg.sender,
-                _defaultFeeBasisPoints,
-                initialStakeQuota
-            )
-        );
+        StakingVault vault = _deployVault(msg.sender, initialStakeQuota);
 
-        address vaultAddress = address(proxy);
-        StakingVault vault = StakingVault(payable(vaultAddress));
         _vaultsByOwner[msg.sender] = vault;
-        _grantRole(STAKING_VAULT_ROLE, vaultAddress);
+        _grantRole(STAKING_VAULT_ROLE, address(vault));
 
-        emit VaultCreated(msg.sender, vaultAddress);
-        emit StakeQuotaRequested(vaultAddress, initialStakeQuota);
+        emit VaultCreated(msg.sender, address(vault));
+        emit StakeQuotaRequested(address(vault), initialStakeQuota);
 
         return vault;
+    }
+
+    /// @dev Predict the address of a vault for a specific owner
+    /// @param staker The owner of the vault
+    /// @param initialStakeQuota The initial stake quota
+    /// @return The address of the vault
+    function predictVaultAddress(address staker, uint256 initialStakeQuota) external view returns (StakingVault) {
+        bytes32 salt = keccak256(abi.encodePacked(staker));
+        bytes memory bytecode = _getVaultCreationCode(staker, initialStakeQuota);
+
+        address vaultAddress = Create2.computeAddress(salt, keccak256(bytecode), address(this));
+        return StakingVault(payable(vaultAddress));
     }
 
     /*
@@ -210,5 +211,64 @@ contract StakingHub is IStakingHub, AccessControl, ReentrancyGuardTransient {
         }
 
         _stakingVaultImplementation = newStakingVault;
+    }
+
+    /*
+     * Internal functions
+     */
+
+    /// @dev Deploy a contract using the CREATE2 opcode
+    /// @param staker The owner of the vault
+    /// @param initialStakeQuota The initial stake quota
+    /// @return The address of the deployed contract
+    function _deployVault(address staker, uint256 initialStakeQuota) internal virtual returns (StakingVault) {
+        bytes32 salt = keccak256(abi.encodePacked(staker));
+        bytes memory bytecode = _getVaultCreationCode(staker, initialStakeQuota);
+
+        address vaultAddress = Create2.deploy(0, salt, bytecode);
+        return StakingVault(payable(vaultAddress));
+    }
+
+    /// @dev Get the bytecode for deploying a proxy to the StakingVault
+    /// @param staker The owner of the vault
+    /// @param initialStakeQuota The initial stake quota
+    /// @return The bytecode
+    function _getVaultCreationCode(
+        address staker,
+        uint256 initialStakeQuota
+    )
+        internal
+        view
+        virtual
+        returns (bytes memory)
+    {
+        // The following code is equivalent to the following Solidity code:
+        // new ERC1967Proxy(
+        //     address(_stakingVaultImplementation),
+        //     abi.encodeWithSelector(
+        //         StakingVault.initialize.selector,
+        //         address(this),
+        //         _defaultOperator,
+        //         _defaultFeeRecipient,
+        //         staker,
+        //         _defaultFeeBasisPoints,
+        //         initialStakeQuota
+        //     )
+        // );
+        return abi.encodePacked(
+            type(ERC1967Proxy).creationCode,
+            abi.encode(
+                address(_stakingVaultImplementation),
+                abi.encodeWithSelector(
+                    StakingVault.initialize.selector,
+                    address(this),
+                    _defaultOperator,
+                    _defaultFeeRecipient,
+                    staker,
+                    _defaultFeeBasisPoints,
+                    initialStakeQuota
+                )
+            )
+        );
     }
 }

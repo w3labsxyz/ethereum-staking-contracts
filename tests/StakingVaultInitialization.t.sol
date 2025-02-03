@@ -74,6 +74,26 @@ contract StakingVaultInitializationTest is Test {
         assertEq(stakingVault.staker(), address(0x0));
     }
 
+    function test_predictedStakingVaultAddresses() public {
+        vm.prank(staker);
+        StakingVault vault0 = stakingHub.predictVaultAddress(staker, 0 ether);
+
+        vm.prank(staker);
+        StakingVault vault32 = stakingHub.predictVaultAddress(staker, 32 ether);
+
+        assertNotEq(
+            address(vault0),
+            address(vault32),
+            "Vault addresses of the same staker differ with different initial stake quotas"
+        );
+
+        address staker2 = address(0x11);
+        vm.prank(staker2);
+        StakingVault vault0_2 = stakingHub.predictVaultAddress(staker2, 0 ether);
+
+        assertNotEq(address(vault0), address(vault0_2), "Vault addresses of different stakers differ");
+    }
+
     /// @dev Test the initialization of a proxy contract with initial stake quota
     function test_initializationOfAProxyContractWithInitialStakeQuota() public {
         // The Staker initializes a proxy to the StakingVault
