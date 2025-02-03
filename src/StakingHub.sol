@@ -15,10 +15,10 @@ contract StakingHub is IStakingHub, AccessControl, ReentrancyGuardTransient {
      */
 
     /// @dev Role for the node operator
-    bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
+    bytes32 private constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
 
     /// @dev Role for StakingVaults
-    bytes32 public constant STAKING_VAULT_ROLE = keccak256("STAKING_VAULT_ROLE");
+    bytes32 private constant STAKING_VAULT_ROLE = keccak256("STAKING_VAULT_ROLE");
 
     /*
      * State

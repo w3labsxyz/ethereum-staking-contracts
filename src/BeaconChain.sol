@@ -14,14 +14,14 @@ library BeaconChain {
     // the EIP is merged.
     //
     // https://eips.ethereum.org/EIPS/eip-7251
-    uint256 public constant MAX_EFFECTIVE_BALANCE = 32 ether;
-    uint64 public constant MAX_EFFECTIVE_BALANCE_IN_GWEI = 32_000_000_000;
+    uint256 internal constant MAX_EFFECTIVE_BALANCE = 32 ether;
+    uint64 internal constant MAX_EFFECTIVE_BALANCE_IN_GWEI = 32_000_000_000;
 
     /// @dev The byte-length of validator public keys
-    uint256 public constant PUBKEY_LENGTH = 48;
+    uint256 internal constant PUBKEY_LENGTH = 48;
 
     /// @dev The byte-length of validator signatures
-    uint256 public constant SIGNATURE_LENGTH = 96;
+    uint256 internal constant SIGNATURE_LENGTH = 96;
 
     /// @dev Error when the deposit amount is not a multiple of gwei or exceeds the maximum uint64 value
     error DepositAmountInvalid();

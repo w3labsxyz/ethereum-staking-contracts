@@ -42,13 +42,13 @@ contract StakingVault is
      */
 
     /// @dev Role for the node operator
-    bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
+    bytes32 private constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
 
     /// @dev Role for the staker
-    bytes32 public constant STAKER_ROLE = keccak256("STAKER_ROLE");
+    bytes32 private constant STAKER_ROLE = keccak256("STAKER_ROLE");
 
     /// @dev Role for depositors
-    bytes32 public constant DEPOSITOR_ROLE = keccak256("DEPOSITOR_ROLE");
+    bytes32 private constant DEPOSITOR_ROLE = keccak256("DEPOSITOR_ROLE");
 
     /// @dev Fees can not exceed 100%
     uint256 private constant MAX_BASIS_POINTS = 10_000;
