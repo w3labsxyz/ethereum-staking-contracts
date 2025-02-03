@@ -7,9 +7,6 @@ import { Bytes } from "@openzeppelin/contracts/utils/Bytes.sol";
 /// @dev A library with beacon chain specific constants and a function to reconstruct the deposit data root from partial
 /// deposit data
 library BeaconChain {
-    // @dev The minimum amount required to activate a validator
-    uint256 public constant MIN_ACTIVATION_BALANCE = 32 ether;
-
     // @dev The maximum effective balance that a validator can have
     //
     // @dev This value will change with EIP-7251, but only when compounding

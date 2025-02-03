@@ -11,18 +11,6 @@ abstract contract EIP7002 {
     /// @dev The address of the withdrawal request predeploy contract
     address internal _withdrawalRequestPredeployAddress;
 
-    /// @dev The number of withdrawal requests per block
-    /// See: https://eips.ethereum.org/EIPS/eip-7002#configuration
-    uint256 private constant TARGET_WITHDRAWAL_REQUESTS_PER_BLOCK = 2;
-
-    /// @dev The maximum downwards rate of change of the blob gas price
-    /// See: https://eips.ethereum.org/EIPS/eip-7002#configuration
-    uint256 private constant WITHDRAWAL_REQUEST_FEE_UPDATE_FRACTION = 17;
-
-    /// @dev The minimum withdrawal request fee
-    /// See: https://eips.ethereum.org/EIPS/eip-7002#configuration
-    uint256 private constant MIN_WITHDRAWAL_REQUEST_FEE = 1;
-
     /// @dev Error thrown pre EIP-7002 contract deployment
     error EIP7002ContractNotDeployed();
 
