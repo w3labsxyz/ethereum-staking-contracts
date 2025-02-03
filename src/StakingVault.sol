@@ -221,7 +221,7 @@ contract StakingVault is
         // https://eips.ethereum.org/EIPS/eip-7002#configuration
         _withdrawalRequestPredeployAddress = address(0x0c15F14308530b7CDB8460094BbB9cC28b9AaaAA);
 
-        if (initialStakeQuota > 0) _requestStakeQuota(initialStakeQuota);
+        if (initialStakeQuota != 0) _requestStakeQuota(initialStakeQuota);
     }
 
     /*
@@ -418,7 +418,7 @@ contract StakingVault is
             );
 
             uint256 expectedWithdrawAmount = _principalPerValidator[pubkeys[i]];
-            if (expectedWithdrawAmount > 0) {
+            if (expectedWithdrawAmount != 0) {
                 _principalPerValidator[pubkeys[i]] = 0;
             }
             totalWithdrawAmount += expectedWithdrawAmount;
