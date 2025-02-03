@@ -239,9 +239,8 @@ contract StakingVault is
     /// @dev Override the `grantRole` function to disallow the removal of the
     /// OPERATOR_ROLE and STAKER_ROLE
     function renounceRole(bytes32 role, address callerConfirmation) public virtual override {
-        if (role == OPERATOR_ROLE || role == STAKER_ROLE) {
-            revert AccessControlInvalidRoleRemoval();
-        }
+        if (role == OPERATOR_ROLE) revert AccessControlInvalidRoleRemoval();
+        if (role == STAKER_ROLE) revert AccessControlInvalidRoleRemoval();
 
         super.renounceRole(role, callerConfirmation);
     }
@@ -390,9 +389,8 @@ contract StakingVault is
     /// @param pubkeys The public keys of the validators to trigger withdrawals for
     function requestUnbondings(bytes[] calldata pubkeys) external payable virtual nonReentrant onlyRole(STAKER_ROLE) {
         uint256 numberOfUnbondings = pubkeys.length;
-        if (numberOfUnbondings == 0 || numberOfUnbondings >= type(uint16).max) {
-            revert InvalidUnbonding();
-        }
+        if (numberOfUnbondings == 0) revert InvalidUnbonding();
+        if (numberOfUnbondings >= type(uint16).max) revert InvalidUnbonding();
 
         uint256 recommendedFee = _recommendedWithdrawalRequestsFee(numberOfUnbondings);
 
@@ -440,9 +438,8 @@ contract StakingVault is
     /// @param pubkeys The public keys of the validators to register unbondings for
     function attestUnbondings(bytes[] calldata pubkeys) external virtual onlyRole(OPERATOR_ROLE) {
         uint256 numberOfUnbondings = pubkeys.length;
-        if (numberOfUnbondings == 0 || numberOfUnbondings >= type(uint16).max) {
-            revert InvalidUnbonding();
-        }
+        if (numberOfUnbondings == 0) revert InvalidUnbonding();
+        if (numberOfUnbondings >= type(uint16).max) revert InvalidUnbonding();
 
         uint256 totalWithdrawAmount = 0;
 
@@ -587,7 +584,8 @@ contract StakingVault is
     /// @param newStake The amount of stake that deposit data is requested for
     function depositData(uint256 newStake) external view virtual returns (DepositData[] memory) {
         if (newStake > _stakeQuota()) revert StakeQuotaTooLow();
-        if (newStake == 0 || newStake % BeaconChain.MAX_EFFECTIVE_BALANCE != 0) {
+        if (newStake == 0) revert InvalidDepositAmount();
+        if (newStake % BeaconChain.MAX_EFFECTIVE_BALANCE != 0) {
             revert InvalidDepositAmount();
         }
 
