@@ -14,4 +14,11 @@ localnet-info:
     kurtosis enclave inspect localnet
 
 deploy-devnet:
-    forge script --chain="dev" scripts/Deploy.s.sol:DeployDevnet --broadcast --fork-url http://great-weevil:34002
+    forge script --chain="dev" scripts/Devnet.s.sol:Deploy --broadcast --fork-url http://great-weevil:34002
+
+compile-abi:
+    forge build
+    jq 'del(.metadata, .rawMetadata, .id, .bytecode, .deployedBytecode, .ast)' \
+        out/StakingHub.sol/StakingHub.json > abi/StakingHub.json
+    jq 'del(.metadata, .rawMetadata, .id, .bytecode, .deployedBytecode, .ast)' \
+        out/StakingVault.sol/StakingVault.json > abi/StakingVault.json
