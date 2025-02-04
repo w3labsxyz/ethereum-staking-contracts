@@ -107,8 +107,32 @@ contract StakingVault is
      * Events
      */
 
+    /// @dev Event emitted when a new stake quota is requested
+    event StakeQuotaRequested(uint256 amount);
+
     /// @dev The event emitted when the stake quota is approved
     event StakeQuotaUpdated(uint256 approvedStakeQuota);
+
+    /// @dev Event emitted when a stake is deposited
+    event Deposited(uint256 amount);
+
+    /// @dev Event emitted when an unbonding request is made
+    event UnbondingRequested(bytes[] pubkeys);
+
+    /// @dev Event emitted when an unbonding request is attested
+    event UnbondingAttested(bytes[] pubkeys);
+
+    /// @dev Event emitted when principal is withdrawn
+    event PrincipalWithdrawn(uint256 amount);
+
+    /// @dev Event emitted when rewards are claimed
+    event RewardsClaimed(uint256 amount);
+
+    /// @dev Event emitted when fees are claimed
+    event FeesClaimed(uint256 amount);
+
+    /// @dev Event emitted when the fee recipient is updated
+    event FeeRecipientUpdated(address newFeeRecipient);
 
     /*
      * Errors
@@ -259,6 +283,7 @@ contract StakingVault is
     /// request multiple times to stake more Ether.
     function requestStakeQuota(uint256 newRequestedStakeQuota) external virtual onlyRole(STAKER_ROLE) {
         _requestStakeQuota(newRequestedStakeQuota);
+        emit StakeQuotaRequested(newRequestedStakeQuota);
         _stakingHub.announceStakeQuotaRequest(_staker, newRequestedStakeQuota);
     }
 
@@ -374,6 +399,9 @@ contract StakingVault is
                 BeaconChain.depositDataRoot(pubkey, withdrawalCredentials, signature, BeaconChain.MAX_EFFECTIVE_BALANCE)
             );
         }
+
+        emit Deposited(msg.value);
+        _stakingHub.announceStakeDelegation(_staker, msg.value);
     }
 
     function recommendedWithdrawalRequestsFee(uint256 numberOfWithdrawalRequests) external virtual returns (uint256) {
@@ -426,6 +454,7 @@ contract StakingVault is
         _withdrawablePrincipal = _withdrawablePrincipal + totalWithdrawAmount;
         _numberOfUnbondings = _numberOfUnbondings + uint16(numberOfUnbondings);
 
+        emit UnbondingRequested(pubkeys);
         _stakingHub.announceUnbondingRequest(_staker, pubkeys);
     }
 
@@ -456,6 +485,8 @@ contract StakingVault is
         _principalAtStake = _principalAtStake - totalWithdrawAmount;
         _withdrawablePrincipal = _withdrawablePrincipal + totalWithdrawAmount;
         _numberOfUnbondings = _numberOfUnbondings + uint16(numberOfUnbondings);
+
+        emit UnbondingAttested(pubkeys);
     }
 
     /// @notice Triggers withdrawal of unbonded principal
@@ -472,6 +503,8 @@ contract StakingVault is
 
         _withdrawablePrincipal = _withdrawablePrincipal - claimable;
         Address.sendValue(_staker, claimable);
+
+        emit PrincipalWithdrawn(claimable);
     }
 
     /// @notice Triggers withdrawal of the accumulated rewards to the staker.
@@ -484,6 +517,8 @@ contract StakingVault is
 
         _claimedRewards += claimable;
         Address.sendValue(_staker, claimable);
+
+        emit RewardsClaimed(claimable);
     }
 
     /// @notice Triggers withdrawal of the acculated fees to the fee recipient
@@ -496,6 +531,8 @@ contract StakingVault is
 
         _claimedFees += claimable;
         Address.sendValue(_feeRecipient, claimable);
+
+        emit FeesClaimed(claimable);
     }
 
     /*
@@ -677,5 +714,7 @@ contract StakingVault is
     function setFeeRecipient(address payable newFeeRecipient) external virtual onlyRole(OPERATOR_ROLE) {
         if (newFeeRecipient == address(0)) revert ZeroAddress();
         _feeRecipient = newFeeRecipient;
+
+        emit FeeRecipientUpdated(newFeeRecipient);
     }
 }

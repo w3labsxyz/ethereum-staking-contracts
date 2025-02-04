@@ -55,6 +55,18 @@ contract StakingHub is IStakingHub, AccessControl, ReentrancyGuardTransient {
     /// @dev Event emitted when a vault issues an unbonding request
     event StakeUnbondingRequested(address vault, bytes[] pubkeys);
 
+    /// @dev Event emitted when the default operator is updated
+    event DefaultOperatorUpdated(address operator);
+
+    /// @dev Event emitted when the default fee recipient is updated
+    event DefaultFeeRecipientUpdated(address feeRecipient);
+
+    /// @dev Event emitted when the default fee basis points are updated
+    event DefaultFeeBasisPointsUpdated(uint256 feeBasisPoints);
+
+    /// @dev Event emitted when the default StakingVault implementation is updated
+    event DefaultStakingVaultImplementationUpdated(address stakingVaultImplementation);
+
     /*
      * Errors
      */
@@ -190,6 +202,8 @@ contract StakingHub is IStakingHub, AccessControl, ReentrancyGuardTransient {
         if (newOperator == address(0)) revert OperatorZeroAddress();
 
         _defaultOperator = newOperator;
+
+        emit DefaultOperatorUpdated(newOperator);
     }
 
     /// @notice Update the address of the default fee recipient
@@ -197,11 +211,15 @@ contract StakingHub is IStakingHub, AccessControl, ReentrancyGuardTransient {
         if (newFeeRecipient == address(0)) revert FeeRecipientZeroAddress();
 
         _defaultFeeRecipient = newFeeRecipient;
+
+        emit DefaultFeeRecipientUpdated(newFeeRecipient);
     }
 
     /// @notice Update the default fee basis points
     function setDefaultFeeBasisPoints(uint256 newFeeBasisPoints) external onlyRole(OPERATOR_ROLE) {
         _defaultFeeBasisPoints = newFeeBasisPoints;
+
+        emit DefaultFeeBasisPointsUpdated(newFeeBasisPoints);
     }
 
     /// @notice Update the default StakingVault implementation contract
@@ -211,6 +229,8 @@ contract StakingHub is IStakingHub, AccessControl, ReentrancyGuardTransient {
         }
 
         _stakingVaultImplementation = newStakingVault;
+
+        emit DefaultStakingVaultImplementationUpdated(address(newStakingVault));
     }
 
     /*
