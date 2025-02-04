@@ -9,6 +9,7 @@ import { StakingVault } from "../src/StakingVault.sol";
 import { StakingHub } from "../src/StakingHub.sol";
 
 contract StakingVaultInitializationTest is Test {
+    bytes32 OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
     IDepositContract depositContract;
     StakingVault stakingVault;
     StakingHub stakingHub;
@@ -40,7 +41,7 @@ contract StakingVaultInitializationTest is Test {
         // Expect the implementation contract state to be empty before initialization
         IDepositContract storedDepositContract = stakingVault.depositContractAddress();
         assertEq(address(storedDepositContract), address(0x0));
-        assertFalse(stakingVault.hasRole(stakingVault.OPERATOR_ROLE(), operator));
+        assertFalse(stakingVault.hasRole(OPERATOR_ROLE, operator));
         assertEq(stakingVault.feeRecipient(), address(0x0));
         assertEq(stakingVault.staker(), address(0x0));
         assertEq(stakingVault.feeBasisPoints(), 0);
@@ -57,7 +58,7 @@ contract StakingVaultInitializationTest is Test {
 
         // The staker, feeRecipient, and operator are the same for the proxy
         assertEq(stakingVaultProxy.staker(), staker);
-        assertTrue(stakingVaultProxy.hasRole(stakingVault.OPERATOR_ROLE(), operator));
+        assertTrue(stakingVaultProxy.hasRole(OPERATOR_ROLE, operator));
         assertEq(stakingVaultProxy.feeRecipient(), feeRecipient);
         assertEq(stakingVaultProxy.feeBasisPoints(), feeBasisPoints);
 
@@ -69,7 +70,7 @@ contract StakingVaultInitializationTest is Test {
         // affect the implementation contract but only the proxy
         storedDepositContract = stakingVault.depositContractAddress();
         assertEq(address(storedDepositContract), address(0x0));
-        assertFalse(stakingVault.hasRole(stakingVault.OPERATOR_ROLE(), operator));
+        assertFalse(stakingVault.hasRole(OPERATOR_ROLE, operator));
         assertEq(stakingVault.feeRecipient(), address(0x0));
         assertEq(stakingVault.staker(), address(0x0));
     }
@@ -153,7 +154,7 @@ contract StakingVaultInitializationTest is Test {
         StakingVault stakingVaultProxy = stakingHub.createVault(0);
 
         // The feeRecipient and operator are the same for the proxy and the implementation
-        assertTrue(stakingVaultProxy.hasRole(stakingVault.OPERATOR_ROLE(), operator));
+        assertTrue(stakingVaultProxy.hasRole(OPERATOR_ROLE, operator));
         assertEq(stakingVaultProxy.feeRecipient(), feeRecipient);
 
         // Update the default operator and feeRecipient in the factory contract
@@ -170,11 +171,11 @@ contract StakingVaultInitializationTest is Test {
 
         // The operator and feeRecipient in the implementation contract are not
         // affected by an update to the defaults in the factory contract
-        assertFalse(stakingVault.hasRole(stakingVault.OPERATOR_ROLE(), operator));
+        assertFalse(stakingVault.hasRole(OPERATOR_ROLE, operator));
         assertEq(stakingVault.feeRecipient(), address(0x0));
 
         // The operator and feeRecipient in the proxy have not changed
-        assertTrue(stakingVaultProxy.hasRole(stakingVault.OPERATOR_ROLE(), operator));
+        assertTrue(stakingVaultProxy.hasRole(OPERATOR_ROLE, operator));
         assertEq(stakingVaultProxy.feeRecipient(), feeRecipient);
 
         vm.prank(operator);
@@ -186,7 +187,7 @@ contract StakingVaultInitializationTest is Test {
         // factory remain untouched
         assertEq(stakingHub.defaultOperator(), newOperator);
         assertEq(stakingHub.defaultFeeRecipient(), newFeeRecipient);
-        assertFalse(stakingVault.hasRole(stakingVault.OPERATOR_ROLE(), operator));
+        assertFalse(stakingVault.hasRole(OPERATOR_ROLE, operator));
         assertEq(stakingVault.feeRecipient(), address(0x0));
     }
 }

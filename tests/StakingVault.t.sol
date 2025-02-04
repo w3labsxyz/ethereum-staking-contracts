@@ -507,7 +507,7 @@ contract StakingVaultTest is Test, StakingVaultSetup {
         (bool success,) = payable(stakingVaultProxy).call{ value: 32 ether }("");
         assertFalse(success, "Unauthorized depositor should not be able to stake");
 
-        bytes32 DEPOSITOR_ROLE = stakingVaultProxy.DEPOSITOR_ROLE();
+        bytes32 DEPOSITOR_ROLE = keccak256("DEPOSITOR_ROLE");
 
         // Add depositor1
         vm.prank(staker);
@@ -553,9 +553,9 @@ contract StakingVaultTest is Test, StakingVaultSetup {
 
     /// @dev Tests access control
     function test_accessControl() public {
-        bytes32 DEPOSITOR_ROLE = stakingVaultProxy.DEPOSITOR_ROLE();
-        bytes32 OPERATOR_ROLE = stakingVaultProxy.OPERATOR_ROLE();
-        bytes32 STAKER_ROLE = stakingVaultProxy.STAKER_ROLE();
+        bytes32 DEPOSITOR_ROLE = keccak256("DEPOSITOR_ROLE");
+        bytes32 OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
+        bytes32 STAKER_ROLE = keccak256("STAKER_ROLE");
 
         // The staker can't be removed as staker
         vm.prank(staker);
