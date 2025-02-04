@@ -74,19 +74,23 @@ contract StakingVault is
     IDepositContract internal _depositContractAddress;
 
     /// @dev The total number of deposit data in the _depositData mapping
-    uint16 private _depositDataCount;
+    uint32 private _depositDataCount;
+
+    /// @dev The total number of requests for deposit data
+    /// Points to the tail of the 'preallocated' slots in the _depositData mapping
+    uint32 private _depositDataRequestCount;
 
     /// @dev The total number of deposits that were exercised by the staker
     /// This number is also the next index of the deposit data to be processed
-    uint16 private _numberOfDeposits;
+    uint32 private _numberOfDeposits;
 
     /// @dev The total number of unbondings that were requested by the staker
     /// This number is also the next index of the unbonding data to be processed
-    uint16 private _numberOfUnbondings;
+    uint32 private _numberOfUnbondings;
 
-    /// @dev Indexed map of deposit data. Supports a maximum of 2^16 - 1 deposit data,
-    /// i.e., 65535 * 32 Ether
-    mapping(uint16 => StoredDepositData) private _depositData;
+    /// @dev Indexed map of deposit data. Supports a maximum of 2^32 - 1 deposit data,
+    /// i.e., 4.294.967.296 * 32 Ether
+    mapping(uint32 => StoredDepositData) private _depositData;
 
     /// @dev Balance per validator (identified by public key)
     mapping(bytes => uint256) private _principalPerValidator;
@@ -141,10 +145,13 @@ contract StakingVault is
     /// @dev Error when trying to remove the OPERATOR_ROLE or STAKER_ROLE
     error AccessControlInvalidRoleRemoval();
 
+    /// @dev Error when invalid fee basis points are provided
     error InvalidFeeBasisPoints(uint256 feeBasisPoints);
 
+    /// @dev Error when a zero address is provided
     error ZeroAddress();
 
+    /// @dev Error when we can't accept a role removal
     error InvalidRoleRemoval();
 
     /// @dev Error when the public key length does not match the expected length
@@ -283,7 +290,6 @@ contract StakingVault is
     /// request multiple times to stake more Ether.
     function requestStakeQuota(uint256 newRequestedStakeQuota) external virtual onlyRole(STAKER_ROLE) {
         _requestStakeQuota(newRequestedStakeQuota);
-        emit StakeQuotaRequested(newRequestedStakeQuota);
         _stakingHub.announceStakeQuotaRequest(_staker, newRequestedStakeQuota);
     }
 
@@ -292,9 +298,10 @@ contract StakingVault is
             revert RequestedStakeQuotaInvalid();
         }
 
-        uint16 numberOfDeposits = uint16(newRequestedStakeQuota / BeaconChain.MAX_EFFECTIVE_BALANCE);
-        uint16 depositDataOffset = _depositDataCount;
-        for (uint16 i = depositDataOffset; i < depositDataOffset + numberOfDeposits; ++i) {
+        uint32 numberOfDeposits = uint32(newRequestedStakeQuota / BeaconChain.MAX_EFFECTIVE_BALANCE);
+        uint32 depositDataOffset =
+            _depositDataCount >= _depositDataRequestCount ? _depositDataCount : _depositDataRequestCount;
+        for (uint32 i = depositDataOffset; i < depositDataOffset + numberOfDeposits; ++i) {
             _depositData[i] = StoredDepositData({
                 // We are using non-zero values to initialize the fields
                 // in order to actually allocate the storage slots
@@ -305,6 +312,10 @@ contract StakingVault is
                 signature_3: bytes32(uint256(1))
             });
         }
+
+        _depositDataRequestCount = depositDataOffset + numberOfDeposits;
+
+        emit StakeQuotaRequested(newRequestedStakeQuota);
     }
 
     /// @notice Approve a quota to be staked in this vault by registering the
@@ -326,12 +337,12 @@ contract StakingVault is
         uint256 numberOfDepositData = pubkeys.length;
 
         if (
-            numberOfDepositData == 0 || numberOfDepositData >= type(uint16).max || pubkeys.length != signatures.length
+            numberOfDepositData == 0 || numberOfDepositData >= type(uint32).max || pubkeys.length != signatures.length
                 || pubkeys.length != depositValues.length
         ) revert InvalidDepositData();
 
-        uint16 depositDataOffset = _depositDataCount;
-        for (uint16 i = 0; i < numberOfDepositData; ++i) {
+        uint32 depositDataOffset = _depositDataCount;
+        for (uint32 i = 0; i < numberOfDepositData; ++i) {
             if (pubkeys[i].length != BeaconChain.PUBKEY_LENGTH) {
                 revert PublicKeyLengthMismatch();
             }
@@ -351,7 +362,7 @@ contract StakingVault is
         }
 
         // We can safely downcast here as we have checked the length of pubkeys above
-        _depositDataCount = _depositDataCount + uint16(numberOfDepositData);
+        _depositDataCount = _depositDataCount + uint32(numberOfDepositData);
 
         emit StakeQuotaUpdated(_stakeQuota());
     }
@@ -375,13 +386,13 @@ contract StakingVault is
         // Construct 0x01 withdrawal credentials using the address of this staking vault
         bytes32 withdrawalCredentials = _withdrawalCredentials();
 
-        uint16 previousNumberOfDeposits = _numberOfDeposits;
-        uint16 numberOfNewDeposits = uint16(msg.value / BeaconChain.MAX_EFFECTIVE_BALANCE);
+        uint32 previousNumberOfDeposits = _numberOfDeposits;
+        uint32 numberOfNewDeposits = uint32(msg.value / BeaconChain.MAX_EFFECTIVE_BALANCE);
 
         _numberOfDeposits = _numberOfDeposits + numberOfNewDeposits;
         _principalAtStake = _principalAtStake + BeaconChain.MAX_EFFECTIVE_BALANCE * numberOfNewDeposits;
 
-        for (uint16 i = previousNumberOfDeposits; i < previousNumberOfDeposits + numberOfNewDeposits; ++i) {
+        for (uint32 i = previousNumberOfDeposits; i < previousNumberOfDeposits + numberOfNewDeposits; ++i) {
             StoredDepositData storage storedDepositData = _depositData[i];
 
             bytes memory pubkey = bytes.concat(storedDepositData.pubkey_1, bytes16(storedDepositData.pubkey_2));
@@ -418,7 +429,7 @@ contract StakingVault is
     function requestUnbondings(bytes[] calldata pubkeys) external payable virtual nonReentrant onlyRole(STAKER_ROLE) {
         uint256 numberOfUnbondings = pubkeys.length;
         if (numberOfUnbondings == 0) revert InvalidUnbonding();
-        if (numberOfUnbondings >= type(uint16).max) revert InvalidUnbonding();
+        if (numberOfUnbondings >= type(uint32).max) revert InvalidUnbonding();
 
         uint256 recommendedFee = _recommendedWithdrawalRequestsFee(numberOfUnbondings);
 
@@ -452,7 +463,7 @@ contract StakingVault is
 
         _principalAtStake = _principalAtStake - totalWithdrawAmount;
         _withdrawablePrincipal = _withdrawablePrincipal + totalWithdrawAmount;
-        _numberOfUnbondings = _numberOfUnbondings + uint16(numberOfUnbondings);
+        _numberOfUnbondings = _numberOfUnbondings + uint32(numberOfUnbondings);
 
         emit UnbondingRequested(pubkeys);
         _stakingHub.announceUnbondingRequest(_staker, pubkeys);
@@ -468,7 +479,7 @@ contract StakingVault is
     function attestUnbondings(bytes[] calldata pubkeys) external virtual onlyRole(OPERATOR_ROLE) {
         uint256 numberOfUnbondings = pubkeys.length;
         if (numberOfUnbondings == 0) revert InvalidUnbonding();
-        if (numberOfUnbondings >= type(uint16).max) revert InvalidUnbonding();
+        if (numberOfUnbondings >= type(uint32).max) revert InvalidUnbonding();
 
         uint256 totalWithdrawAmount = 0;
 
@@ -484,7 +495,7 @@ contract StakingVault is
 
         _principalAtStake = _principalAtStake - totalWithdrawAmount;
         _withdrawablePrincipal = _withdrawablePrincipal + totalWithdrawAmount;
-        _numberOfUnbondings = _numberOfUnbondings + uint16(numberOfUnbondings);
+        _numberOfUnbondings = _numberOfUnbondings + uint32(numberOfUnbondings);
 
         emit UnbondingAttested(pubkeys);
     }
@@ -544,6 +555,14 @@ contract StakingVault is
         return _stakeQuota();
     }
 
+    /// @notice Get the unsatisfied stake quota requests, i.e., the amount of
+    /// Ether that has been requested to be staked but has not been approved yet
+    function unapprovedStakeQuota() external view virtual returns (uint256) {
+        if (_depositDataCount >= _depositDataRequestCount) return 0;
+
+        return (_depositDataRequestCount - _depositDataCount) * BeaconChain.MAX_EFFECTIVE_BALANCE;
+    }
+
     /// @notice Get the amount currently staked
     function stakedBalance() external view virtual returns (uint256) {
         return _principalAtStake;
@@ -587,7 +606,7 @@ contract StakingVault is
     function allPubkeys() external view virtual returns (bytes[] memory) {
         bytes[] memory pubkeys = new bytes[](_depositDataCount);
 
-        for (uint16 i = 0; i < _numberOfDeposits; ++i) {
+        for (uint32 i = 0; i < _numberOfDeposits; ++i) {
             StoredDepositData storage storedDepositData = _depositData[i];
             pubkeys[i] = bytes.concat(storedDepositData.pubkey_1, bytes16(storedDepositData.pubkey_2));
         }
@@ -626,14 +645,14 @@ contract StakingVault is
             revert InvalidDepositAmount();
         }
 
-        uint16 numberOfNewDeposits = uint16(newStake / BeaconChain.MAX_EFFECTIVE_BALANCE);
+        uint32 numberOfNewDeposits = uint32(newStake / BeaconChain.MAX_EFFECTIVE_BALANCE);
 
         // Construct 0x01 withdrawal credentials using the address of this staking vault
         bytes32 withdrawalCredentials = _withdrawalCredentials();
         DepositData[] memory tempDepositData = new DepositData[](numberOfNewDeposits);
 
-        uint16 depositDataOffset = _numberOfDeposits;
-        for (uint16 i = 0; i < numberOfNewDeposits; ++i) {
+        uint32 depositDataOffset = _numberOfDeposits;
+        for (uint32 i = 0; i < numberOfNewDeposits; ++i) {
             StoredDepositData storage storedDepositData = _depositData[depositDataOffset + i];
 
             bytes memory pubkey = bytes.concat(storedDepositData.pubkey_1, bytes16(storedDepositData.pubkey_2));

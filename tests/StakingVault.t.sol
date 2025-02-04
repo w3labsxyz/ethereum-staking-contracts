@@ -48,6 +48,24 @@ contract StakingVaultTest is Test, StakingVaultSetup {
         string fork_version;
     }
 
+    function test_approveStakeQuotaWithoutRequest() public {
+        assertEq(stakingVaultProxy.unapprovedStakeQuota(), 0 ether);
+
+        string memory root = vm.projectRoot();
+        string memory path = string.concat(root, "/tests/fixtures/32eth-deposit.json");
+        string memory json = vm.readFile(path);
+        bytes[] memory pubkeys = vm.parseJsonBytesArray(json, ".pubkeys");
+        bytes[] memory signatures = vm.parseJsonBytesArray(json, ".signatures");
+        uint256[] memory depositValues = vm.parseJsonUintArray(json, ".amounts");
+
+        // The operator approves stake quota without a request
+        vm.prank(operator);
+        stakingVaultProxy.approveStakeQuota(pubkeys, signatures, depositValues);
+
+        assertEq(stakingVaultProxy.unapprovedStakeQuota(), 0 ether);
+        assertEq(stakingVaultProxy.stakeQuota(), 32 ether);
+    }
+
     /// @dev `approveStakeQuota` can register one deposit data
     function test_successfulStakingOf32Ether() public {
         vm.prank(staker);
@@ -64,9 +82,13 @@ contract StakingVaultTest is Test, StakingVaultSetup {
 
         console.log("Staking vault proxy: %s", address(stakingVaultProxy));
 
+        assertEq(stakingVaultProxy.unapprovedStakeQuota(), 32 ether);
+
         // The operator approves the stake quota
         vm.prank(operator);
         stakingVaultProxy.approveStakeQuota(pubkeys, signatures, depositValues);
+
+        assertEq(stakingVaultProxy.unapprovedStakeQuota(), 0 ether);
 
         StakingVault.DepositData[] memory pd = stakingVaultProxy.depositData(32 ether);
 
