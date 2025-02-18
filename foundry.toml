@@ -15,6 +15,7 @@ libs = ["lib"]
 fs_permissions = [
     { access = "read", path = "./tests/fixtures" },
     { access = "read", path = "./scripts/fixtures" },
+    { access = "write", path = "./out" },
 ]
 ffi = true
 
