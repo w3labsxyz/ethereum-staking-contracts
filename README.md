@@ -6,12 +6,12 @@ The [`tests`](/tests) and [`scripts](/scripts) directories contain tests and scr
 
 The following table lists the networks and respective addresses that the contracts have been deployed to:
 
-| Network | Chain Id | Contract                      | Address |
-| ------- | -------- | ----------------------------- | ------- |
-| Mainnet | 1        | StakingHub                    | [0x]()  |
-| Mainnet | 1        | StakingVault (Implementation) | [0x]()  |
-| Holesky | 17000    | StakingHub                    | [0x]()  |
-| Holesky | 17000    | StakingVault (Implementation) | [0x]()  |
+| Network | Chain Id | Contract                      | Address                                                                                                                       |
+| ------- | -------- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Mainnet | 1        | StakingHub                    | [0xa2a9c501d1d29ff696e7045c05deef1ed7511143](https://etherscan.io/address/0xa2a9c501d1d29ff696e7045c05deef1ed7511143)         |
+| Mainnet | 1        | StakingVault (Implementation) | [0x01e3758a2ed05E2E87F0E62CBB247b42146a8293](https://etherscan.io/address/0x01e3758a2ed05E2E87F0E62CBB247b42146a8293)         |
+| Holesky | 17000    | StakingHub                    | [0xe0a30f5f34c91b0acd2726d07da88d67fe4e5994](https://holesky.etherscan.io/address/0xe0a30f5f34c91b0acd2726d07da88d67fe4e5994) |
+| Holesky | 17000    | StakingVault (Implementation) | [0x7152223aabe4f83c0b7dd03e9552017393153633](https://holesky.etherscan.io/address/0x7152223aabe4f83c0b7dd03e9552017393153633) |
 
 ## Contracts
 
@@ -208,4 +208,109 @@ To run the tests, you can run:
 npm run test
 npm run test:gas-report
 npm run test:coverage:report
+```
+
+## Deployment
+
+To deploy the contracts, we use [Nick's method](https://medium.com/patronum-labs/nicks-method-ethereum-keyless-execution-168a6659479c).
+
+### Deploying the `StakingVault` implementation contract:
+
+#### Deploying in the devnet
+
+```shell
+export OPERATOR_ADDRESS=0xE0C015892d16eBfc16500811fEB05501A425116B
+export FEE_RECIPIENT_ADDRESS=0x0bf37242332Ee420A091891BD94921cEDE2ff46a
+export BASIS_POINTS=1000
+export RPC_URL=http://great-weevil:34002
+
+# Create the raw bytecode for deploying the StakingVault
+forge script scripts/CreateDeploymentBytecode.s.sol:CreateStakingVaultDeploymentBytecode
+# The `3872765` gas required has been derived via `forge test --gas-report`
+npm run presign-deployment-tx -- StakingVault 1000000000 3872765
+# Fund the deployer account
+cast send --value 0.003872765ether 0xC58a4F71b13cFa2CF9A5C065CC45d484F9329694 --private-key 0xbcdf20249abf0ed6d944c0288fad489e33f66b3960d9e6229c1cd214ed3bbe31 --rpc-url $RPC_URL
+# And broadcast the transaction
+cast publish "$(cat out/CreateStakingVault.tx.json)" --rpc-url $RPC_URL
+# Verify the contract
+export STAKING_VAULT_IMPLEMENTATION_ADDRESS=0x2bf97632f255741282639ff72344e6cd9c98fcf4
+forge verify-contract --rpc-url $RPC_URL --verifier blockscout --verifier-url http://localhost:36003/api --json $STAKING_VAULT_IMPLEMENTATION_ADDRESS StakingVault
+
+# Create the raw bytecode for deploying the StakingHub
+forge script scripts/CreateDeploymentBytecode.s.sol:CreateStakingHubDeploymentBytecode --sig "run(address,address,address,uint256)" $STAKING_VAULT_IMPLEMENTATION_ADDRESS $OPERATOR_ADDRESS $FEE_RECIPIENT_ADDRESS $BASIS_POINTS
+# We found out the 1603338 gas by simulating in the devnet
+npm run presign-deployment-tx -- StakingHub 1000000000 1603338
+# Fund the deployer account
+cast send --value 0.001603338ether 0xCaF3fbD31226D39edd3198Bf200408C779E496CC --private-key 0xbcdf20249abf0ed6d944c0288fad489e33f66b3960d9e6229c1cd214ed3bbe31 --rpc-url $RPC_URL
+# And broadcast the transaction
+cast publish "$(cat out/CreateStakingHub.tx.json)" --rpc-url $RPC_URL
+export STAKING_HUB_ADDRESS=0xe447bcbf912260916d7370a8b7561dbdc9132d2e
+forge verify-contract --rpc-url $RPC_URL --verifier blockscout --verifier-url http://localhost:36003/api --json --guess-constructor-args $STAKING_HUB_ADDRESS StakingHub
+
+# To deploy a proxy, run
+cast send --value 1ether 0x614561D2d143621E126e87831AEF287678B442b8 --private-key 0xbcdf20249abf0ed6d944c0288fad489e33f66b3960d9e6229c1cd214ed3bbe31 --rpc-url $RPC_URL
+forge script scripts/Devnet.s.sol:DeployStakingVaultProxy --rpc-url $RPC_URL --broadcast --sig "run(address)" $STAKING_HUB_ADDRESS
+
+# To request a certain amount of stake quota
+forge script scripts/Devnet.s.sol:RequestStakQuotaOnStakingVaultProxy --rpc-url $RPC_URL --broadcast --sig "run(address,uint256)" $STAKING_HUB_ADDRESS 100
+
+# StakingVault Proxy of the staker: 0xb6ac5EeAF247CE45E2DE29933252b83fD9cB71c4
+
+# Fund the operator
+cast send --value 0.5ether 0xE0C015892d16eBfc16500811fEB05501A425116B --private-key 0xbcdf20249abf0ed6d944c0288fad489e33f66b3960d9e6229c1cd214ed3bbe31 --rpc-url $RPC_URL
+```
+
+#### Deploying in Holesky
+
+```shell
+export OPERATOR_ADDRESS=0xE0C015892d16eBfc16500811fEB05501A425116B
+export FEE_RECIPIENT_ADDRESS=0x0bf37242332Ee420A091891BD94921cEDE2ff46a
+export BASIS_POINTS=1000
+export RPC_URL=http://mighty-weevil:8545
+
+# Start with the StakingVault
+forge script scripts/CreateDeploymentBytecode.s.sol:CreateStakingVaultDeploymentBytecode
+npm run presign-deployment-tx -- StakingVault 5000000000 3872765
+# Fund the deployer account
+cast publish "$(cat out/CreateStakingVault.tx.json)" --rpc-url $RPC_URL
+export STAKING_VAULT_IMPLEMENTATION_ADDRESS=0x7152223aabe4f83c0b7dd03e9552017393153633
+op run --env-file=".env" -- forge verify-contract --verifier etherscan --rpc-url $RPC_URL --json $STAKING_VAULT_IMPLEMENTATION_ADDRESS StakingVault
+
+# Continue with the StakingHub
+forge script scripts/CreateDeploymentBytecode.s.sol:CreateStakingHubDeploymentBytecode --sig "run(address,address,address,uint256)" $STAKING_VAULT_IMPLEMENTATION_ADDRESS $OPERATOR_ADDRESS $FEE_RECIPIENT_ADDRESS $BASIS_POINTS
+# We found out the 1603338 gas by simulating in the devnet
+npm run presign-deployment-tx -- StakingHub 5000000000 1603338
+# Fund the deployer account
+cast publish "$(cat out/CreateStakingHub.tx.json)" --rpc-url $RPC_URL
+export STAKING_HUB_ADDRESS=0xe0a30f5f34c91b0acd2726d07da88d67fe4e5994
+op run --env-file=".env" -- forge verify-contract --verifier etherscan --rpc-url $RPC_URL --json --guess-constructor-args $STAKING_HUB_ADDRESS StakingHub
+```
+
+#### Deploying in Mainnet
+
+```shell
+export OPERATOR_ADDRESS=0xE0837559527A693a23fEbf7c15BC36A943464386
+export FEE_RECIPIENT_ADDRESS=0x30529bb39F3f940cBa6F03B7C19bc70de6fa9555
+export BASIS_POINTS=1000
+export RPC_URL=http://boss-ray:8545
+
+# Start with the StakingVault
+forge script scripts/CreateDeploymentBytecode.s.sol:CreateStakingVaultDeploymentBytecode
+npm run presign-deployment-tx -- StakingVault 2000000000 3872765
+# Fund the deployer account
+cast publish "$(cat out/CreateStakingVault.tx.json)" --rpc-url $RPC_URL
+export STAKING_VAULT_IMPLEMENTATION_ADDRESS=0x01e3758a2ed05E2E87F0E62CBB247b42146a8293
+op run --env-file=".env" -- forge verify-contract --verifier etherscan --rpc-url $RPC_URL --json $STAKING_VAULT_IMPLEMENTATION_ADDRESS StakingVault
+forge verify-contract --rpc-url $RPC_URL --verifier blockscout --verifier-url https://eth.blockscout.com/api --json $STAKING_VAULT_IMPLEMENTATION_ADDRESS StakingVault
+forge verify-contract --rpc-url $RPC_URL --verifier sourcify --json $STAKING_VAULT_IMPLEMENTATION_ADDRESS StakingVault
+
+# Continue with the StakingHub
+forge script scripts/CreateDeploymentBytecode.s.sol:CreateStakingHubDeploymentBytecode --sig "run(address,address,address,uint256)" $STAKING_VAULT_IMPLEMENTATION_ADDRESS $OPERATOR_ADDRESS $FEE_RECIPIENT_ADDRESS $BASIS_POINTS
+# We found out the 1603338 gas by simulating in the devnet
+npm run presign-deployment-tx -- StakingHub 2000000000 1603338
+# Fund the deployer account
+cast publish "$(cat out/CreateStakingHub.tx.json)" --rpc-url $RPC_URL
+export STAKING_HUB_ADDRESS=0xA2A9C501D1D29fF696E7045c05DeEf1ed7511143
+op run --env-file=".env" -- forge verify-contract --verifier etherscan --rpc-url $RPC_URL --json --guess-constructor-args $STAKING_HUB_ADDRESS StakingHub
+forge verify-contract --rpc-url $RPC_URL --verifier blockscout --verifier-url https://eth.blockscout.com/api --json --guess-constructor-args $STAKING_HUB_ADDRESS StakingHub
 ```

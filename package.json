@@ -11,6 +11,7 @@
     "test": "forge test",
     "test:gas-report": "forge test --gas-report",
     "test:coverage": "forge coverage",
+    "presign-deployment-tx": "ts-node bin/presign-deployment-tx.ts",
     "test:coverage:report": "forge coverage --report lcov && genhtml lcov.info --ignore-errors inconsistent --branch-coverage --output-dir coverage"
   },
   "repository": {
@@ -29,6 +30,10 @@
   },
   "homepage": "https://github.com/w3labsxyz/ethereum-staking-contracts#readme",
   "devDependencies": {
-    "solhint": "5.0.4"
+    "solhint": "5.0.4",
+    "ts-node": "^10.9.2"
+  },
+  "dependencies": {
+    "ethers": "^6.13.5"
   }
 }
