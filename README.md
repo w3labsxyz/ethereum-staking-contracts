@@ -298,10 +298,10 @@ export RPC_URL=http://mighty-weevil:8545
 
 # Start with the StakingVault
 forge script scripts/CreateDeploymentBytecode.s.sol:CreateStakingVaultDeploymentBytecode
-npm run presign-deployment-tx -- StakingVault 5000000000 4000000 # Real value: 3887893
+npm run presign-deployment-tx -- StakingVault 5000000000 4000000 # Real value: 3886777
 # Fund the deployer account
 cast publish "$(cat out/CreateStakingVault.tx.json)" --rpc-url $RPC_URL
-export STAKING_VAULT_IMPLEMENTATION_ADDRESS=0xD6b9c9e3108163B3207F723c18D60e1b785767f6
+export STAKING_VAULT_IMPLEMENTATION_ADDRESS=0x286961f5dc4b7df0132aa33e44e7c35111a50932
 op run --env-file=".env" -- forge verify-contract --verifier etherscan --rpc-url $RPC_URL --json $STAKING_VAULT_IMPLEMENTATION_ADDRESS StakingVault
 
 # Continue with the StakingHub

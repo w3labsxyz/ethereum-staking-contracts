@@ -456,8 +456,7 @@ contract StakingVault is
 
             _addEip7002WithdrawalRequest(
                 pubkeys[i],
-                // We always exercise full withdrawals at this point
-                BeaconChain.MAX_EFFECTIVE_BALANCE_IN_GWEI,
+                0, // An amount of `0` triggers a full exit
                 withdrawalFee
             );
 
