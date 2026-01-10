@@ -49,7 +49,7 @@ abstract contract EIP7002 {
     /// See: https://eips.ethereum.org/EIPS/eip-7002#withdrawal-request-contract
     /// @dev This function forwards the entire message value to the eip-7002 contract
     /// @param pubkey The public key of the validator to trigger a withdrawal for
-    /// @param withdrawalAmount The withdrawal amount in gwei
+    /// @param withdrawalAmount The withdrawal amount in gwei. Use `0` for a full exit.
     function _addEip7002WithdrawalRequest(
         bytes calldata pubkey,
         uint64 withdrawalAmount,

@@ -12,6 +12,8 @@ The following table lists the networks and respective addresses that the contrac
 | Mainnet | 1        | StakingVault (Implementation) | [0x01e3758a2ed05E2E87F0E62CBB247b42146a8293](https://etherscan.io/address/0x01e3758a2ed05E2E87F0E62CBB247b42146a8293)         |
 | Holesky | 17000    | StakingHub                    | [0xe0a30f5f34c91b0acd2726d07da88d67fe4e5994](https://holesky.etherscan.io/address/0xe0a30f5f34c91b0acd2726d07da88d67fe4e5994) |
 | Holesky | 17000    | StakingVault (Implementation) | [0x7152223aabe4f83c0b7dd03e9552017393153633](https://holesky.etherscan.io/address/0x7152223aabe4f83c0b7dd03e9552017393153633) |
+| Hoodi   | 560048   | StakingHub                    | [0x7DC044196556C06d0285827D1016ED3edf44405A](https://hoodi.etherscan.io/address/0x7DC044196556C06d0285827D1016ED3edf44405A)   |
+| Hoodi   | 560048   | StakingVault (Implementation) | [0xD6b9c9e3108163B3207F723c18D60e1b785767f6](https://hoodi.etherscan.io/address/0xD6b9c9e3108163B3207F723c18D60e1b785767f6)   |
 
 ## Contracts
 
@@ -283,6 +285,31 @@ npm run presign-deployment-tx -- StakingHub 5000000000 1603338
 # Fund the deployer account
 cast publish "$(cat out/CreateStakingHub.tx.json)" --rpc-url $RPC_URL
 export STAKING_HUB_ADDRESS=0xe0a30f5f34c91b0acd2726d07da88d67fe4e5994
+op run --env-file=".env" -- forge verify-contract --verifier etherscan --rpc-url $RPC_URL --json --guess-constructor-args $STAKING_HUB_ADDRESS StakingHub
+```
+
+#### Deploying in Hoodi
+
+```shell
+export OPERATOR_ADDRESS=0xE0C015892d16eBfc16500811fEB05501A425116B
+export FEE_RECIPIENT_ADDRESS=0x0bf37242332Ee420A091891BD94921cEDE2ff46a
+export BASIS_POINTS=1000
+export RPC_URL=http://mighty-weevil:8545
+
+# Start with the StakingVault
+forge script scripts/CreateDeploymentBytecode.s.sol:CreateStakingVaultDeploymentBytecode
+npm run presign-deployment-tx -- StakingVault 5000000000 4000000 # Real value: 3886777
+# Fund the deployer account
+cast publish "$(cat out/CreateStakingVault.tx.json)" --rpc-url $RPC_URL
+export STAKING_VAULT_IMPLEMENTATION_ADDRESS=0x286961f5dc4b7df0132aa33e44e7c35111a50932
+op run --env-file=".env" -- forge verify-contract --verifier etherscan --rpc-url $RPC_URL --json $STAKING_VAULT_IMPLEMENTATION_ADDRESS StakingVault
+
+# Continue with the StakingHub
+forge script scripts/CreateDeploymentBytecode.s.sol:CreateStakingHubDeploymentBytecode --sig "run(address,address,address,uint256)" $STAKING_VAULT_IMPLEMENTATION_ADDRESS $OPERATOR_ADDRESS $FEE_RECIPIENT_ADDRESS $BASIS_POINTS
+npm run presign-deployment-tx -- StakingHub 5000000000 2000000 # Real value:
+# Fund the deployer account
+cast publish "$(cat out/CreateStakingHub.tx.json)" --rpc-url $RPC_URL
+export STAKING_HUB_ADDRESS=0x7DC044196556C06d0285827D1016ED3edf44405A
 op run --env-file=".env" -- forge verify-contract --verifier etherscan --rpc-url $RPC_URL --json --guess-constructor-args $STAKING_HUB_ADDRESS StakingHub
 ```
 

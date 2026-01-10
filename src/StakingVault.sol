@@ -241,6 +241,11 @@ contract StakingVault is
                 // https://etherscan.io/address/0x00000000219ab540356cbb839cbe05303d7705fa
                 0x00000000219ab540356cBB839Cbe05303d7705Fa
             );
+        } else if (block.chainid == 560048) {
+            _depositContractAddress = IDepositContract(
+                // https://hoodi.etherscan.io/address/0x00000000219ab540356cBB839Cbe05303d7705Fa
+                0x00000000219ab540356cBB839Cbe05303d7705Fa
+            );
         } else {
             _depositContractAddress = IDepositContract(
                 // For other networks, such as those used in testing, we use the supplied address
@@ -250,7 +255,9 @@ contract StakingVault is
         }
 
         // https://eips.ethereum.org/EIPS/eip-7002#configuration
-        _withdrawalRequestPredeployAddress = address(0x0c15F14308530b7CDB8460094BbB9cC28b9AaaAA);
+        _withdrawalRequestPredeployAddress = address(
+            0x00000961Ef480Eb55e80D19ad83579A64c007002
+        );
 
         if (initialStakeQuota != 0) _requestStakeQuota(initialStakeQuota);
     }
@@ -449,8 +456,7 @@ contract StakingVault is
 
             _addEip7002WithdrawalRequest(
                 pubkeys[i],
-                // We always exercise full withdrawals at this point
-                BeaconChain.MAX_EFFECTIVE_BALANCE_IN_GWEI,
+                0, // An amount of `0` triggers a full exit
                 withdrawalFee
             );
 
